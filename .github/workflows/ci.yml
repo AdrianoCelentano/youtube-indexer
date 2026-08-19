@@ -74,7 +74,13 @@ jobs:
       - name: Coverage report
         run: ./gradlew :shared:koverXmlReport :shared:koverHtmlReport
 
-      - name: Upload test & coverage reports
+      # Renders both Compose surfaces on the JVM and diffs them against the goldens in
+      # src/test/screenshots. No emulator is possible on this project's hardware
+      # (see README), so this is the UI regression net.
+      - name: Verify screenshots
+        run: ./gradlew :androidApp:verifyRoborazziDebug :androidTvApp:verifyRoborazziDebug
+
+      - name: Upload test, coverage & screenshot reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -83,6 +89,8 @@ jobs:
             shared/build/reports/tests/**
             shared/build/test-results/**
             shared/build/reports/kover/**
+            **/build/outputs/roborazzi/**
+            **/build/reports/roborazzi/**
           if-no-files-found: ignore
 
   build:

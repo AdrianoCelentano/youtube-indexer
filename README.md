@@ -102,8 +102,29 @@ adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk
 adb install -r androidTvApp/build/outputs/apk/debug/androidTvApp-debug.apk
 ```
 
-For automated UI verification that *does* work headlessly, use JVM-based screenshot
-testing (Roborazzi/Paparazzi) rather than an emulator.
+## Screenshot tests (how UI is actually verified here)
+
+Because no emulator can run, Compose screens are rendered **on the JVM** with
+Robolectric + Roborazzi and diffed against goldens committed under
+`<module>/src/test/screenshots/`.
+
+```bash
+./gradlew :androidApp:verifyRoborazziDebug :androidTvApp:verifyRoborazziDebug  # CI check
+./gradlew :androidApp:recordRoborazziDebug :androidTvApp:recordRoborazziDebug  # update goldens
+```
+
+Record goldens and **commit the PNGs** whenever a screen legitimately changes; CI fails
+the build on any unreviewed visual diff.
+
+The TV screen renders at 1080p landscape (`w960dp-h540dp-television-xhdpi` — 1920x1080 px
+at xhdpi). Note that Android resource qualifiers must appear in a strict order or
+Robolectric fails to parse them.
+
+Rendering runs at **API 35, not 36**: Robolectric refuses SDK 36 unless the test JVM is
+Java 21, and this project builds on Java 17. API 35 renders these screens identically.
+
+Screenshot tests are a rendering check, not a device check — they will not catch
+device-specific behaviour, real D-pad focus traversal, or GPU/driver issues.
 
 ## Toolchain
 
