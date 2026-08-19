@@ -32,10 +32,11 @@ class TvMainActivity : ComponentActivity() {
 @Composable
 private fun TvScaffoldingScreen() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // Overscan padding keeps content off the bezel on real TV panels.
-            .padding(Dimens.TvOverscanPadding),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                // Overscan padding keeps content off the bezel on real TV panels.
+                .padding(Dimens.TvOverscanPadding),
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceM, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

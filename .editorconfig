@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+max_line_length = 120
+ktlint_standard_function-naming = disabled
+# Composable functions are PascalCase by convention, which ktlint's function-naming
+# rule flags. Disabled project-wide rather than annotating every composable.
+
+[*.gradle.kts]
+# The Gradle DSL is chain-heavy by design (libs.versions.x.get().toInt()); forcing a
+# newline before every '.' makes build files harder to read, not easier.
+ktlint_standard_chain-method-continuation = disabled
+
+[*.{xml,yml,yaml,json,toml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

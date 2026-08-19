@@ -61,6 +61,50 @@ adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk
 adb install -r androidTvApp/build/outputs/apk/debug/androidTvApp-debug.apk
 ```
 
+## Quality checks
+
+```bash
+./gradlew ktlintCheck     # formatting (auto-fix with ./gradlew ktlintFormat)
+./gradlew detekt          # static analysis
+./gradlew :androidApp:lintDebug :androidTvApp:lintDebug   # Android Lint
+./gradlew :shared:allTests                                # shared unit tests
+./gradlew :shared:koverXmlReport :shared:koverHtmlReport  # coverage
+```
+
+CI (`.github/workflows/ci.yml`) runs these in three parallel jobs — static analysis,
+tests + coverage, and APK build — and uploads reports and APKs as artifacts.
+
+Two configuration details are load-bearing and easy to break:
+
+- **detekt needs explicit source dirs.** It defaults to the `src/main/kotlin` layout,
+  which KMP modules don't use. Without the `source.setFrom(...)` in the root build file
+  it reports `NO-SOURCE` for `:shared` and `:ui-common` and silently analyses nothing.
+- **`withHostTest {}`** must stay in `:shared`'s `kotlin { android { } }` block, or
+  `commonTest` is never compiled and the test job passes vacuously.
+
+## Emulators — not possible on this VPS
+
+Android emulators **cannot run on this build host**, by design of the hardware:
+
+- x86_64 system images require KVM. `systemd-detect-virt` reports this box is itself a
+  KVM guest with no `vmx`/`svm` flags exposed, so nested virtualisation is off and
+  `/dev/kvm` cannot exist. `emulator -accel-check` confirms:
+  *"KVM requires a CPU that supports vmx or svm"*.
+- ARM64 images don't help — the emulator refuses cross-architecture guests outright:
+  *"Avd's CPU Architecture 'arm64' is not supported by the QEMU2 emulator on x86_64
+  host."*
+
+Anything requiring a rendered UI must therefore be verified on real hardware or a local
+machine. A green build here is **not** evidence that a screen renders.
+
+```bash
+adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk
+adb install -r androidTvApp/build/outputs/apk/debug/androidTvApp-debug.apk
+```
+
+For automated UI verification that *does* work headlessly, use JVM-based screenshot
+testing (Roborazzi/Paparazzi) rather than an emulator.
+
 ## Toolchain
 
 Versions are centralised in `gradle/libs.versions.toml`.

@@ -11,6 +11,12 @@ minSdk = "24"
 # Android TV requires minSdk 21+; 24 keeps us aligned with the phone app.
 targetSdk = "36"
 
+# Static analysis & coverage
+ktlintPlugin = "14.2.0"
+ktlint = "1.8.0"
+detekt = "1.23.8"
+kover = "0.9.9"
+
 # Shared libraries (Phase 1+ tickets consume these)
 coroutines = "1.11.0"
 serialization = "1.11.0"
@@ -63,3 +69,6 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintPlugin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

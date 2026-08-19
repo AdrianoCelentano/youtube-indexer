@@ -5,7 +5,6 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class AppInfoTest {
-
     @Test
     fun name_is_stable() {
         assertEquals("YouTube Indexer", AppInfo.NAME)

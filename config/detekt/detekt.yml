@@ -1,0 +1,36 @@
+# Project detekt config, layered on top of detekt's defaults (buildUponDefaultConfig = true).
+# Only deviations from the defaults belong here.
+
+build:
+  maxIssues: 0
+
+complexity:
+  LongParameterList:
+    # Composables legitimately take many parameters (state + callbacks + modifier).
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    # A screen file with many small private composables is normal and readable.
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+    ignoreOverridden: true
+
+style:
+  MagicNumber:
+    # dp/sp literals in Compose UI code are self-describing.
+    ignoreNumbers: ['-1', '0', '1', '2', '100']
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignorePropertyDeclaration: true
+  MaxLineLength:
+    maxLineLength: 120
+  UnusedPrivateMember:
+    # @Composable @Preview functions look unused to detekt.
+    ignoreAnnotated: ['Preview', 'Composable']
+
+naming:
+  FunctionNaming:
+    # Composables are PascalCase.
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
