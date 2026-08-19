@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pure-Compose TV app, so we only need a bare no-action-bar dark shell here. -->
+    <style name="Theme.YouTubeIndexerTv" parent="android:Theme.Material.NoActionBar" />
+</resources>

@@ -1,0 +1,65 @@
+[versions]
+# Toolchain
+agp = "9.3.1"
+kotlin = "2.4.10"
+composeMultiplatform = "1.11.1"
+jvmTarget = "17"
+
+# SDK levels
+compileSdk = "36"
+minSdk = "24"
+# Android TV requires minSdk 21+; 24 keeps us aligned with the phone app.
+targetSdk = "36"
+
+# Shared libraries (Phase 1+ tickets consume these)
+coroutines = "1.11.0"
+serialization = "1.11.0"
+ktor = "3.5.2"
+sqldelight = "2.3.2"
+koin = "4.2.2"
+
+# AndroidX
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+work = "2.11.2"
+securityCrypto = "1.1.0"
+tvMaterial = "1.1.0"
+
+[libraries]
+# --- Kotlin / coroutines / serialization ---
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+# --- Ktor (YouTube Data API client, Phase 1) ---
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+
+# --- SQLDelight (local index + FTS5, Phase 2) ---
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-coroutines-ext = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+# --- DI ---
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+
+# --- AndroidX ---
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+androidx-tv-material = { module = "androidx.tv:tv-material", version.ref = "tvMaterial" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+# AGP 9+ requires this plugin (not com.android.library) for Kotlin Multiplatform modules.
+android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

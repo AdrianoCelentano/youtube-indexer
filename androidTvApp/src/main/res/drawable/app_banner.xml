@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Placeholder TV launcher banner (320x180 is the required aspect for Android TV).
+  Replaced with real artwork in the Phase 6 store-listing ticket.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#0F0F0F"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#FF0033"
+        android:pathData="M120,60h80a16,16 0 0 1 16,16v28a16,16 0 0 1 -16,16h-80a16,16 0 0 1 -16,-16v-28a16,16 0 0 1 16,-16z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M152,76l28,14l-28,14z" />
+</vector>
