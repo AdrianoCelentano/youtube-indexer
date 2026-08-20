@@ -50,30 +50,56 @@ class AuthManager(
                 return@withLock current.accessToken
             }
 
-            val refreshToken =
-                current.refreshToken ?: run {
-                    // Access token is dead and there's nothing to refresh with.
-                    clearLocked()
-                    throw AuthError.NotSignedIn
-                }
-
-            val refreshed =
-                try {
-                    refresher.refresh(refreshToken)
-                } catch (e: AuthError.RefreshRejected) {
-                    // The grant is gone for good -- don't keep credentials that can
-                    // never work again.
-                    clearLocked()
-                    throw e
-                }
-
-            // Google omits refresh_token when refreshing, so fall back to the one we
-            // already hold. Dropping it here would silently end the session at the next
-            // expiry.
-            val merged = refreshed.copy(refreshToken = refreshed.refreshToken ?: refreshToken)
-            persistLocked(merged)
-            merged.accessToken
+            refreshLocked(current)
         }
+
+    /**
+     * Refreshes even when the cached token still looks valid.
+     *
+     * For the case where the API returns 401 despite the expiry check passing: the token
+     * was revoked server-side, or the device clock is skewed.
+     *
+     * @param staleToken the token that was just rejected. If the cached token no longer
+     *   matches it, another caller already refreshed while this one waited for the lock,
+     *   so the fresh token is returned instead. Without this, N concurrent 401s would
+     *   trigger N refreshes.
+     */
+    suspend fun forceRefresh(staleToken: String? = null): String =
+        mutex.withLock {
+            val current = currentTokens() ?: throw AuthError.NotSignedIn
+
+            if (staleToken != null && current.accessToken != staleToken) {
+                return@withLock current.accessToken
+            }
+
+            refreshLocked(current)
+        }
+
+    /** Refreshes and persists. Must be called while holding [mutex]. */
+    private suspend fun refreshLocked(current: OAuthTokens): String {
+        val refreshToken =
+            current.refreshToken ?: run {
+                // Access token is dead and there's nothing to refresh with.
+                clearLocked()
+                throw AuthError.NotSignedIn
+            }
+
+        val refreshed =
+            try {
+                refresher.refresh(refreshToken)
+            } catch (e: AuthError.RefreshRejected) {
+                // The grant is gone for good -- don't keep credentials that can never
+                // work again.
+                clearLocked()
+                throw e
+            }
+
+        // Google omits refresh_token when refreshing, so fall back to the one we already
+        // hold. Dropping it here would silently end the session at the next expiry.
+        val merged = refreshed.copy(refreshToken = refreshed.refreshToken ?: refreshToken)
+        persistLocked(merged)
+        return merged.accessToken
+    }
 
     /** Stores credentials obtained from a completed sign-in flow. */
     suspend fun onSignedIn(tokens: OAuthTokens) =
