@@ -2,6 +2,7 @@ package com.ytindexer.android.auth
 
 import android.net.Uri
 import com.ytindexer.android.BuildConfig
+import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationServiceConfiguration
 
 /**
@@ -33,16 +34,24 @@ object GoogleAuthConfig {
         )
 
     /**
-     * `access_type=offline` is what makes Google issue a refresh token at all.
+     * `access_type=offline` is what makes Google issue a refresh token at all. It is a
+     * Google extension rather than standard OAuth, so it goes through
+     * `setAdditionalParameters`.
      *
-     * `prompt=consent` forces the consent screen every time. Without it Google only
-     * returns a refresh token on the *first* authorization for a given client+account,
-     * so a user who reinstalls the app would sign in successfully and then lose the
-     * session at the first token expiry with no obvious cause.
+     * `prompt` must NOT be added here even though it is also required (see [PROMPT]).
+     * AppAuth throws `IllegalArgumentException: Parameter prompt is directly supported
+     * via the authorization request builder` for any parameter it models first-class,
+     * which crashes the app the moment the user taps sign-in.
      */
-    val authRequestParams: Map<String, String> =
-        mapOf(
-            "access_type" to "offline",
-            "prompt" to "consent",
-        )
+    val authRequestParams: Map<String, String> = mapOf("access_type" to "offline")
+
+    /**
+     * Forces the consent screen every time, via AppAuth's builder rather than
+     * [authRequestParams].
+     *
+     * Without it Google only returns a refresh token on the *first* authorization for a
+     * given client+account, so a user who reinstalled would sign in successfully and then
+     * lose the session at the first token expiry with no obvious cause.
+     */
+    const val PROMPT: String = AuthorizationRequest.Prompt.CONSENT
 }
