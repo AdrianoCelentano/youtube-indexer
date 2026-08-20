@@ -34,8 +34,37 @@ Dependency direction is strictly one-way: both app modules depend on `ui-common`
 - **JDK 17** — required. Note that a JDK 21 *JRE* is not sufficient; the build needs a
   full JDK with `javac`.
 - **Android SDK** with `platforms;android-36` and `build-tools;36.0.0`.
-- `local.properties` pointing at the SDK, e.g. `sdk.dir=/opt/android-sdk`
-  (not committed — create it locally).
+- `local.properties` (not committed — create it locally):
+
+```properties
+sdk.dir=/opt/android-sdk
+googleOauthClientIdAndroid=<your-id>.apps.googleusercontent.com
+```
+
+## Google OAuth setup
+
+**This repo is public — never commit the client ID or any secret.** The build reads it
+from `local.properties`; CI has none, so the app builds there but shows a
+"not configured" screen instead of failing the build.
+
+1. Enable the **YouTube Data API v3**:
+   https://console.cloud.google.com/apis/library/youtube.googleapis.com
+2. Consent screen (https://console.cloud.google.com/auth/overview) — add the scope
+   `https://www.googleapis.com/auth/youtube.readonly`, and add your own account under
+   *Test users* while the app is unverified.
+3. Credentials → OAuth client ID → type **Android**, package `com.ytindexer.android`,
+   plus the SHA-1 of the keystore you build with:
+
+```bash
+keytool -list -v -keystore ~/.android/debug.keystore \
+  -alias androiddebugkey -storepass android -keypass android | grep SHA1
+```
+
+Sign-in uses **AppAuth with PKCE as a public client** — no client secret and no backend.
+The redirect URI is derived automatically from the client ID
+(`com.googleusercontent.apps.<id>:/oauth2redirect`) and injected into the manifest, so a
+wrong SHA-1 or package name shows up as `redirect_uri_mismatch` at runtime rather than at
+build time.
 
 On this VPS:
 
