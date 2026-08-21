@@ -6,8 +6,11 @@ import androidx.lifecycle.ViewModelProvider
 import com.ytindexer.android.auth.GoogleAuthConfig
 import com.ytindexer.android.auth.GoogleSignInClient
 import com.ytindexer.android.auth.SignInViewModel
+import com.ytindexer.android.sync.SyncViewModel
 import com.ytindexer.shared.auth.AuthManager
 import com.ytindexer.shared.auth.createAuthManager
+import com.ytindexer.shared.index.IndexingComponent
+import com.ytindexer.shared.index.createIndexingComponent
 
 /**
  * Manual dependency wiring.
@@ -25,6 +28,18 @@ class AppContainer(
     val authManager: AuthManager by lazy {
         createAuthManager(appContext, GoogleAuthConfig.clientId)
     }
+
+    // How videos are fetched and stored is :shared's business too.
+    private val indexing: IndexingComponent by lazy {
+        createIndexingComponent(appContext, authManager)
+    }
+
+    fun syncViewModelFactory(): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SyncViewModel(indexing.indexer, indexing.store) as T
+        }
 
     fun signInViewModelFactory(): ViewModelProvider.Factory =
         object : ViewModelProvider.Factory {

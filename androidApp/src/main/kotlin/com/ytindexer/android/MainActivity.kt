@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ytindexer.android.auth.SignInScreen
 import com.ytindexer.android.auth.SignInViewModel
+import com.ytindexer.android.sync.SyncPanel
+import com.ytindexer.android.sync.SyncViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,9 +45,19 @@ private fun SignInRoute(container: AppContainer) {
             viewModel.onSignInResult(result.data)
         }
 
+    val syncViewModel: SyncViewModel = viewModel(factory = container.syncViewModelFactory())
+    val syncState by syncViewModel.uiState.collectAsState()
+
     SignInScreen(
         state = state,
         onSignInClick = { viewModel.signInIntent()?.let(launcher::launch) },
         onSignOutClick = viewModel::signOut,
+        signedInContent = {
+            SyncPanel(
+                state = syncState,
+                onSyncClick = syncViewModel::sync,
+                onClearClick = syncViewModel::clearIndex,
+            )
+        },
     )
 }
