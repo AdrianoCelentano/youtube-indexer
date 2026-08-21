@@ -29,6 +29,9 @@ internal fun SignInScreen(
     onSignInClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // Rendered only once signed in; kept as a slot so this screen stays stateless and
+    // the screenshot tests can render every state without an indexer.
+    signedInContent: @Composable () -> Unit = {},
 ) {
     Column(
         modifier = modifier.fillMaxSize().padding(Dimens.SpaceL),
@@ -57,6 +60,7 @@ internal fun SignInScreen(
 
             is SignInUiState.SignedIn -> {
                 SignedInContent(state, onSignOutClick)
+                signedInContent()
             }
         }
     }
