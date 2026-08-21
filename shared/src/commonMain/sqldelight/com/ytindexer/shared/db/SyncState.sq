@@ -1,0 +1,30 @@
+-- Progress of the indexing job, so a run interrupted by a crash, a dead network or the
+-- process being killed can resume instead of starting the channel over.
+--
+-- Keyed by channelId rather than being a singleton: signing into a different account
+-- must not inherit the previous account's cursor.
+--
+-- pendingPageToken is the playlist cursor for a full index still in progress. It is NULL
+-- once the channel has been walked end to end.
+CREATE TABLE SyncState (
+    channelId          TEXT NOT NULL PRIMARY KEY,
+    uploadsPlaylistId  TEXT NOT NULL,
+    lastCompletedAt    INTEGER,
+    pendingPageToken   TEXT,
+    fullIndexCompleted INTEGER NOT NULL DEFAULT 0,
+    videosIndexed      INTEGER NOT NULL DEFAULT 0
+);
+
+-- INSERT OR REPLACE: UPSERT requires SQLite 3.24 (Android API 30+), minSdk here is 24.
+upsert:
+INSERT OR REPLACE INTO SyncState(channelId, uploadsPlaylistId, lastCompletedAt, pendingPageToken, fullIndexCompleted, videosIndexed)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectByChannel:
+SELECT * FROM SyncState WHERE channelId = ?;
+
+selectAny:
+SELECT * FROM SyncState LIMIT 1;
+
+deleteAll:
+DELETE FROM SyncState;

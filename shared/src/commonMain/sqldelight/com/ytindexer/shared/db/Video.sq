@@ -1,0 +1,62 @@
+-- One row per video on the signed-in user's channel.
+--
+-- publishedAt is stored as the raw ISO-8601 string YouTube returns rather than an
+-- epoch: it sorts correctly as text (fixed-width, UTC, zero-padded) and avoids a
+-- timezone-parsing dependency in commonMain. Ordering and range filters still work.
+--
+-- tags is a newline-joined string. A separate tags table would be more normalised, but
+-- tags are only ever read back with their video and matched by full-text search, so a
+-- join table would add cost without buying anything.
+CREATE TABLE Video (
+    videoId         TEXT NOT NULL PRIMARY KEY,
+    title           TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    publishedAt     TEXT NOT NULL,
+    thumbnailUrl    TEXT,
+    tags            TEXT NOT NULL DEFAULT '',
+    categoryId      TEXT,
+    durationSeconds INTEGER,
+    indexedAt       INTEGER NOT NULL
+);
+
+-- Category browse and the category filter both sort by recency within a category.
+CREATE INDEX video_category_published ON Video(categoryId, publishedAt DESC);
+CREATE INDEX video_published ON Video(publishedAt DESC);
+
+-- INSERT OR REPLACE rather than ON CONFLICT DO UPDATE: UPSERT needs SQLite 3.24,
+-- which only arrived in Android API 30, and this module targets minSdk 24. Since every
+-- column is supplied on every write, REPLACE is semantically identical here.
+upsert:
+INSERT OR REPLACE INTO Video(videoId, title, description, publishedAt, thumbnailUrl, tags, categoryId, durationSeconds, indexedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectById:
+SELECT * FROM Video WHERE videoId = ?;
+
+selectAll:
+SELECT * FROM Video ORDER BY publishedAt DESC LIMIT :limit OFFSET :offset;
+
+selectByCategory:
+SELECT * FROM Video WHERE categoryId = ? ORDER BY publishedAt DESC LIMIT :limit OFFSET :offset;
+
+-- Categories that actually have indexed videos, so the filter UI never offers an
+-- empty category.
+selectPopulatedCategoryIds:
+SELECT categoryId, COUNT(*) AS videoCount
+FROM Video
+WHERE categoryId IS NOT NULL
+GROUP BY categoryId
+ORDER BY videoCount DESC;
+
+countAll:
+SELECT COUNT(*) FROM Video;
+
+-- Newest publishedAt already stored; the incremental sync stops once it reaches this.
+maxPublishedAt:
+SELECT MAX(publishedAt) FROM Video;
+
+deleteById:
+DELETE FROM Video WHERE videoId = ?;
+
+deleteAll:
+DELETE FROM Video;
