@@ -1,0 +1,20 @@
+-- YouTube video categories, cached so the filter UI can render names offline and
+-- without spending quota on every launch.
+CREATE TABLE Category (
+    categoryId TEXT NOT NULL PRIMARY KEY,
+    title      TEXT NOT NULL
+);
+
+-- INSERT OR REPLACE: UPSERT requires SQLite 3.24 (Android API 30+), minSdk here is 24.
+upsert:
+INSERT OR REPLACE INTO Category(categoryId, title)
+VALUES (?, ?);
+
+selectAll:
+SELECT * FROM Category ORDER BY title;
+
+selectById:
+SELECT * FROM Category WHERE categoryId = ?;
+
+deleteAll:
+DELETE FROM Category;

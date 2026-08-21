@@ -3,6 +3,15 @@ plugins {
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kover)
+    alias(libs.plugins.sqldelight)
+}
+
+sqldelight {
+    databases {
+        create("YtIndexerDatabase") {
+            packageName.set("com.ytindexer.shared.db")
+        }
+    }
 }
 
 kotlin {
@@ -28,9 +37,12 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.koin.core)
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines.ext)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.ktor.client.mock)
         }
@@ -38,6 +50,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.sqldelight.android.driver)
         }
     }
 }

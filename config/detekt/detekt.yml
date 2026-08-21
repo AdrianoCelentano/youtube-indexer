@@ -24,6 +24,11 @@ style:
     ignorePropertyDeclaration: true
   MaxLineLength:
     maxLineLength: 120
+  ReturnCount:
+    # 2 is too strict for a paging loop that maps API failures onto result types:
+    # a single success return plus one per recoverable failure mode is clearer than
+    # threading a nullable accumulator through the loop.
+    max: 3
   UnusedPrivateMember:
     # @Composable @Preview functions look unused to detekt.
     ignoreAnnotated: ['Preview', 'Composable']
