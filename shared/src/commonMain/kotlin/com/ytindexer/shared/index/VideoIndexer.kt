@@ -18,6 +18,8 @@ data class IndexProgress(
 sealed class IndexOutcome {
     data class Completed(
         val videosIndexed: Int,
+        /** Videos removed because YouTube no longer returns them (deleted or made private). */
+        val videosPruned: Long = 0,
     ) : IndexOutcome()
 
     /**
@@ -60,7 +62,17 @@ class VideoIndexer(
      */
     suspend fun indexChannel(onProgress: (IndexProgress) -> Unit = {}): IndexOutcome {
         val channel = api.myChannel()
-        val resumeToken = loadResumeToken(channel.id)
+        val existing = loadSyncState(channel.id)
+        val resumeToken = existing?.takeIf { it.fullIndexCompleted == 0L }?.pendingPageToken
+
+        // A resumed run must keep the *original* start time. Stamping "now" would make
+        // the final prune delete everything the earlier part of this same run stored.
+        val runStartedAt =
+            if (resumeToken != null) {
+                existing?.fullIndexStartedAt ?: clock.nowEpochSeconds()
+            } else {
+                clock.nowEpochSeconds()
+            }
 
         var pageToken = resumeToken
         var indexed = 0
@@ -72,7 +84,7 @@ class VideoIndexer(
 
                 if (page.items.isNotEmpty()) {
                     val videos = api.videosByIds(page.items)
-                    store.upsertAll(videos, clock.nowEpochSeconds())
+                    store.upsertAll(videos, runStartedAt)
                     indexed += videos.size
                 }
 
@@ -86,6 +98,7 @@ class VideoIndexer(
                     nextToken = page.nextPageToken,
                     completed = !page.hasMore,
                     videosIndexed = indexed,
+                    runStartedAt = runStartedAt,
                 )
 
                 onProgress(IndexProgress(indexed, pages, complete = !page.hasMore))
@@ -93,7 +106,9 @@ class VideoIndexer(
                 if (!page.hasMore) break
                 pageToken = page.nextPageToken
             }
-            IndexOutcome.Completed(indexed)
+            // Only safe once the whole channel has been walked: pruning after a partial
+            // run would delete videos that simply had not been reached yet.
+            IndexOutcome.Completed(indexed, store.pruneNotSeenSince(runStartedAt))
         } catch (e: YouTubeApiError.QuotaExceeded) {
             // Cursor is already saved, so the next run resumes rather than restarting.
             IndexOutcome.QuotaExhausted(indexed, e)
@@ -122,14 +137,9 @@ class VideoIndexer(
         store.upsertCategories(categories)
     }
 
-    private suspend fun loadResumeToken(channelId: String): String? =
+    private suspend fun loadSyncState(channelId: String) =
         withContext(ioDispatcher) {
-            database.syncStateQueries
-                .selectByChannel(channelId)
-                .executeAsOneOrNull()
-                // A finished index has no cursor; a fresh run starts from the top.
-                ?.takeIf { it.fullIndexCompleted == 0L }
-                ?.pendingPageToken
+            database.syncStateQueries.selectByChannel(channelId).executeAsOneOrNull()
         }
 
     private suspend fun saveProgress(
@@ -138,6 +148,7 @@ class VideoIndexer(
         nextToken: String?,
         completed: Boolean,
         videosIndexed: Int,
+        runStartedAt: Long,
     ) = withContext(ioDispatcher) {
         database.syncStateQueries.upsert(
             channelId = channelId,
@@ -146,6 +157,7 @@ class VideoIndexer(
             pendingPageToken = if (completed) null else nextToken,
             fullIndexCompleted = if (completed) 1L else 0L,
             videosIndexed = videosIndexed.toLong(),
+            fullIndexStartedAt = runStartedAt,
         )
     }
 }

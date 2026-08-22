@@ -133,10 +133,11 @@ class VideoIndexerTest {
     private fun indexer(
         fake: FakeYouTube,
         db: YtIndexerDatabase,
+        now: Long = NOW,
     ): Pair<VideoIndexer, VideoIndexStore> {
         val store = VideoIndexStore(db, Dispatchers.Unconfined)
         val api = YouTubeApiClient(fake.client(), authManager())
-        return VideoIndexer(api, store, db, Dispatchers.Unconfined, Clock { NOW }) to store
+        return VideoIndexer(api, store, db, Dispatchers.Unconfined, Clock { now }) to store
     }
 
     @Test
@@ -286,6 +287,140 @@ class VideoIndexerTest {
             indexer(pages(), db).first.indexChannel()
 
             assertEquals(2L, VideoIndexStore(db, Dispatchers.Unconfined).videoCount())
+        }
+
+    // --- pruning deleted videos ---------------------------------------------------
+
+    @Test
+    fun videos_youtube_no_longer_returns_are_pruned() =
+        runTest {
+            val db = inMemoryDatabase()
+
+            // First index: three videos.
+            val first = FakeYouTube().apply { pagesByToken[null] = listOf("v1", "v2", "v3") to null }
+            indexer(first, db).first.indexChannel()
+
+            // Second index a minute later: v2 has been deleted upstream. The clock must
+            // advance -- pruning is time-based, so two runs sharing a timestamp cannot be
+            // told apart.
+            val second = FakeYouTube().apply { pagesByToken[null] = listOf("v1", "v3") to null }
+            val (indexer2, store2) = indexer(second, db, now = NOW + 60)
+            val outcome = indexer2.indexChannel()
+
+            assertIs<IndexOutcome.Completed>(outcome)
+            assertEquals(1L, outcome.videosPruned)
+            assertEquals(
+                listOf("v1", "v3"),
+                store2.recentVideos(limit = 10).map { it.id }.sorted(),
+                "a deleted video must not linger and surface as a dead search result",
+            )
+        }
+
+    @Test
+    fun a_resumed_run_does_not_prune_its_own_earlier_pages() =
+        runTest {
+            // The trap in mark-and-sweep: if a resumed run stamps "now" instead of the
+            // original run start, the final prune deletes everything the first half
+            // stored -- silently emptying most of the index.
+            val db = inMemoryDatabase()
+
+            val first =
+                FakeYouTube().apply {
+                    pagesByToken[null] = listOf("v1") to "P2"
+                    pagesByToken["P2"] = listOf("v2") to null
+                    quotaExhaustedAfterPages = 1
+                }
+            indexer(first, db).first.indexChannel()
+            assertEquals(1L, VideoIndexStore(db, Dispatchers.Unconfined).videoCount())
+
+            val second = FakeYouTube().apply { pagesByToken["P2"] = listOf("v2") to null }
+            val (indexer2, store2) = indexer(second, db, now = NOW + 60)
+            val outcome = indexer2.indexChannel()
+
+            assertIs<IndexOutcome.Completed>(outcome)
+            assertEquals(0L, outcome.videosPruned, "nothing from this run should be pruned")
+            assertEquals(2L, store2.videoCount(), "the page indexed before the interruption must survive")
+        }
+
+    @Test
+    fun an_interrupted_run_prunes_nothing() =
+        runTest {
+            // Pruning after a partial walk would delete videos simply not reached yet.
+            val db = inMemoryDatabase()
+            val first = FakeYouTube().apply { pagesByToken[null] = listOf("v1", "v2") to null }
+            indexer(first, db).first.indexChannel()
+
+            val second =
+                FakeYouTube().apply {
+                    pagesByToken[null] = listOf("v1") to "P2"
+                    quotaExhaustedAfterPages = 1
+                }
+            val (indexer2, store2) = indexer(second, db, now = NOW + 60)
+            val outcome = indexer2.indexChannel()
+
+            assertIs<IndexOutcome.QuotaExhausted>(outcome)
+            assertEquals(2L, store2.videoCount(), "v2 was never reached, so it must not be pruned")
+        }
+
+    // --- embedding bookkeeping ----------------------------------------------------
+
+    @Test
+    fun every_indexed_video_gets_a_content_hash() =
+        runTest {
+            val db = inMemoryDatabase()
+            val fake = FakeYouTube().apply { pagesByToken[null] = listOf("v1") to null }
+            indexer(fake, db).first.indexChannel()
+
+            val row = db.videoQueries.selectById("v1").executeAsOne()
+            assertTrue(row.contentHash != null, "without a hash there is no way to detect edits")
+        }
+
+    @Test
+    fun videos_are_listed_as_needing_embedding_until_a_model_is_recorded() =
+        runTest {
+            val db = inMemoryDatabase()
+            val fake = FakeYouTube().apply { pagesByToken[null] = listOf("v1", "v2") to null }
+            val (indexer, store) = indexer(fake, db)
+            indexer.indexChannel()
+
+            assertEquals(2, store.videosNeedingEmbedding("model-a", limit = 10).size)
+        }
+
+    @Test
+    fun re_indexing_preserves_a_recorded_embedding_model() =
+        runTest {
+            // REPLACE would otherwise null the column on every sync, orphaning vectors
+            // that are still perfectly valid.
+            val db = inMemoryDatabase()
+            val fake = { FakeYouTube().apply { pagesByToken[null] = listOf("v1") to null } }
+            indexer(fake(), db).first.indexChannel()
+
+            db.videoQueries.selectById("v1").executeAsOne().let {
+                db.videoQueries.upsert(
+                    videoId = it.videoId,
+                    title = it.title,
+                    description = it.description,
+                    publishedAt = it.publishedAt,
+                    thumbnailUrl = it.thumbnailUrl,
+                    tags = it.tags,
+                    categoryId = it.categoryId,
+                    durationSeconds = it.durationSeconds,
+                    indexedAt = it.indexedAt,
+                    contentHash = it.contentHash,
+                    videoId_ = it.videoId,
+                )
+            }
+            db.videoQueries.markEmbedded("model-a", "v1")
+
+            indexer(fake(), db).first.indexChannel()
+
+            assertEquals(
+                "model-a",
+                db.videoQueries
+                    .selectById("v1")
+                    .executeAsOne()
+                    .embeddingModel,
+            )
         }
 
     // --- store behaviour ---------------------------------------------------------
