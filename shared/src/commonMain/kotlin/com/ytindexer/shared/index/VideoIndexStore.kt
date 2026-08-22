@@ -39,6 +39,8 @@ class VideoIndexStore(
                     categoryId = video.categoryId,
                     durationSeconds = video.durationSeconds,
                     indexedAt = indexedAtEpochSeconds,
+                    contentHash = contentHashOf(video),
+                    videoId_ = video.id,
                 )
             }
         }
@@ -109,6 +111,37 @@ class VideoIndexStore(
                 .maxPublishedAt()
                 .executeAsOne()
                 .MAX
+        }
+
+    /**
+     * Removes videos not seen by the full index that started at [runStartedAtEpochSeconds].
+     *
+     * A completed run stamps every surviving video with the run's start time, so anything
+     * older was not returned by YouTube and has been deleted or made private upstream.
+     * Without this, deleted videos stay in the index forever and surface in search results
+     * pointing at dead links.
+     *
+     * @return how many rows were removed.
+     */
+    suspend fun pruneNotSeenSince(runStartedAtEpochSeconds: Long): Long =
+        withContext(ioDispatcher) {
+            database.transactionWithResult {
+                val before = database.videoQueries.countAll().executeAsOne()
+                database.videoQueries.deleteIndexedBefore(runStartedAtEpochSeconds)
+                before - database.videoQueries.countAll().executeAsOne()
+            }
+        }
+
+    /** Videos whose vector is missing or was built by a different model. */
+    suspend fun videosNeedingEmbedding(
+        model: String,
+        limit: Long,
+    ): List<YouTubeVideo> =
+        withContext(ioDispatcher) {
+            database.videoQueries
+                .selectNeedingEmbedding(model, limit)
+                .executeAsList()
+                .map { it.toDomain() }
         }
 
     /** Wipes the index. Used on sign-out and when switching accounts. */

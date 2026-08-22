@@ -16,7 +16,15 @@ CREATE TABLE Video (
     tags            TEXT NOT NULL DEFAULT '',
     categoryId      TEXT,
     durationSeconds INTEGER,
-    indexedAt       INTEGER NOT NULL
+    indexedAt       INTEGER NOT NULL,
+    -- Stable hash of title+description+tags. Lets a later embedding pass tell whether a
+    -- video's *content* changed, not merely when it was last fetched: without it, editing
+    -- a description would leave a stale vector pointing at the old meaning with nothing
+    -- to flag it.
+    contentHash     TEXT,
+    -- Which embedding model produced the stored vector. Switching models invalidates
+    -- every vector, and without this there is no way to tell which are stale.
+    embeddingModel  TEXT
 );
 
 -- Category browse and the category filter both sort by recency within a category.
@@ -27,8 +35,11 @@ CREATE INDEX video_published ON Video(publishedAt DESC);
 -- which only arrived in Android API 30, and this module targets minSdk 24. Since every
 -- column is supplied on every write, REPLACE is semantically identical here.
 upsert:
-INSERT OR REPLACE INTO Video(videoId, title, description, publishedAt, thumbnailUrl, tags, categoryId, durationSeconds, indexedAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO Video(videoId, title, description, publishedAt, thumbnailUrl, tags, categoryId, durationSeconds, indexedAt, contentHash, embeddingModel)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    -- Preserve any existing embeddingModel: REPLACE would otherwise null it on every
+    -- re-index, silently orphaning vectors that are still valid.
+    (SELECT embeddingModel FROM Video WHERE videoId = ?));
 
 selectById:
 SELECT * FROM Video WHERE videoId = ?;
@@ -57,6 +68,20 @@ SELECT MAX(publishedAt) FROM Video;
 
 deleteById:
 DELETE FROM Video WHERE videoId = ?;
+
+-- Mark-and-sweep prune. A completed full index stamps every surviving video with the
+-- run's start time, so anything older was not returned by YouTube this run and has been
+-- deleted or made private upstream.
+deleteIndexedBefore:
+DELETE FROM Video WHERE indexedAt < ?;
+
+-- Records which model produced a video's vector.
+markEmbedded:
+UPDATE Video SET embeddingModel = ? WHERE videoId = ?;
+
+-- Videos whose text has changed since their vector was built, plus those never embedded.
+selectNeedingEmbedding:
+SELECT * FROM Video WHERE embeddingModel IS NULL OR embeddingModel != ? LIMIT :limit;
 
 deleteAll:
 DELETE FROM Video;

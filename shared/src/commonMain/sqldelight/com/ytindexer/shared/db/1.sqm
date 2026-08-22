@@ -1,0 +1,14 @@
+-- Migration 1 -> 2.
+--
+-- v0.2.0 already shipped and users have indexed data on device, so these columns must be
+-- added by ALTER rather than by recreating the tables: dropping and recreating would
+-- discard a full index that costs real API quota to rebuild.
+--
+-- All three are nullable with no default, which is what makes them safe to add to a
+-- populated table. Existing rows get NULL, which reads correctly as "not yet embedded"
+-- and "content hash unknown".
+
+ALTER TABLE Video ADD COLUMN contentHash TEXT;
+ALTER TABLE Video ADD COLUMN embeddingModel TEXT;
+
+ALTER TABLE SyncState ADD COLUMN fullIndexStartedAt INTEGER;
