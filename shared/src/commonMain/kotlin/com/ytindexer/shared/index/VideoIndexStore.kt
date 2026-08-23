@@ -53,6 +53,12 @@ class VideoIndexStore(
             }
         }
 
+    /** How many videos have a transcript stored. */
+    suspend fun transcribedCount(): Long =
+        withContext(ioDispatcher) {
+            database.videoQueries.countWithTranscript().executeAsOne()
+        }
+
     suspend fun videoCount(): Long =
         withContext(ioDispatcher) {
             database.videoQueries.countAll().executeAsOne()

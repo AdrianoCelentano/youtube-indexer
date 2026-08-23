@@ -113,6 +113,31 @@ class AuthManager(
             clearLocked()
         }
 
+    /**
+     * Whether the stored grant actually includes [scope].
+     *
+     * Requesting a new scope in the sign-in request does **not** retroactively widen an
+     * existing grant: the stored refresh token keeps whatever was consented to at the
+     * time. Callers must check before using a feature that needs a newer scope, or the
+     * API fails with a 403 that looks like a bug rather than "you need to sign in again".
+     */
+    suspend fun hasGrantedScope(scope: String): Boolean =
+        mutex.withLock {
+            currentTokens()?.hasScope(scope) ?: false
+        }
+
+    /**
+     * Granted scopes, or empty when signed out.
+     *
+     * Empty is ambiguous: Google may omit `scope` from a refresh response, so an empty
+     * set means "unknown", not "none granted". Prefer [hasGrantedScope] where the answer
+     * drives UI.
+     */
+    suspend fun grantedScopes(): Set<String> =
+        mutex.withLock {
+            currentTokens()?.scopes ?: emptySet()
+        }
+
     /** True if credentials exist, regardless of whether the access token is currently fresh. */
     suspend fun isSignedIn(): Boolean =
         mutex.withLock {

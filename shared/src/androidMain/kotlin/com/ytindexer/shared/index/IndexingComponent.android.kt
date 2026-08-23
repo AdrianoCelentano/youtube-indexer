@@ -2,6 +2,7 @@ package com.ytindexer.shared.index
 
 import android.content.Context
 import com.ytindexer.shared.auth.AuthManager
+import com.ytindexer.shared.quota.QuotaLedger
 import com.ytindexer.shared.youtube.YouTubeApiClient
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -18,6 +19,8 @@ import kotlinx.serialization.json.Json
 class IndexingComponent internal constructor(
     val indexer: VideoIndexer,
     val store: VideoIndexStore,
+    val backfiller: TranscriptBackfiller,
+    val quotaLedger: QuotaLedger,
 )
 
 fun createIndexingComponent(
@@ -26,6 +29,7 @@ fun createIndexingComponent(
 ): IndexingComponent {
     val database = createDatabase(context)
     val store = VideoIndexStore(database, Dispatchers.IO)
+    val ledger = QuotaLedger(database, Dispatchers.IO)
 
     val httpClient =
         HttpClient {
@@ -35,14 +39,24 @@ fun createIndexingComponent(
             }
         }
 
+    val api = YouTubeApiClient(httpClient, authManager)
+
     return IndexingComponent(
         indexer =
             VideoIndexer(
-                api = YouTubeApiClient(httpClient, authManager),
+                api = api,
                 store = store,
                 database = database,
                 ioDispatcher = Dispatchers.IO,
             ),
         store = store,
+        backfiller =
+            TranscriptBackfiller(
+                api = api,
+                database = database,
+                ledger = ledger,
+                ioDispatcher = Dispatchers.IO,
+            ),
+        quotaLedger = ledger,
     )
 }
