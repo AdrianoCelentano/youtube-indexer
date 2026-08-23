@@ -1,0 +1,20 @@
+-- Migration 2 -> 3.
+--
+-- Adds transcript storage and the quota ledger.
+--
+-- transcript is nullable and separate from the rest of the video row on purpose:
+-- transcripts arrive long after the video is first indexed. At 250 quota units each
+-- (captions.list 50 + captions.download 200) against a 10,000/day allowance, only about
+-- 40 can be fetched per day, so a large channel backfills over weeks. A NULL transcript
+-- means "not fetched yet", which is the normal state for most rows most of the time.
+
+ALTER TABLE Video ADD COLUMN transcript TEXT;
+ALTER TABLE Video ADD COLUMN transcriptFetchedAt INTEGER;
+-- NULL = never attempted. Set even on failure so a video with no captions available is
+-- not retried forever at 50 units a time.
+ALTER TABLE Video ADD COLUMN transcriptAttemptedAt INTEGER;
+
+CREATE TABLE QuotaUsage (
+    pacificDay TEXT NOT NULL PRIMARY KEY,
+    unitsUsed  INTEGER NOT NULL DEFAULT 0
+);

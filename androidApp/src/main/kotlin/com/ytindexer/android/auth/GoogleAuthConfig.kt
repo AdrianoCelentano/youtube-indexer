@@ -15,6 +15,17 @@ import net.openid.appauth.AuthorizationServiceConfiguration
 object GoogleAuthConfig {
     const val YOUTUBE_READONLY_SCOPE: String = "https://www.googleapis.com/auth/youtube.readonly"
 
+    /**
+     * Required by `captions.download`, which is how transcripts are indexed.
+     *
+     * Broader than readonly (it permits writes), so Google scrutinises it harder during
+     * verification. Requested up front deliberately: adding a scope after the consent
+     * screen has been submitted means re-submitting and waiting for another review.
+     */
+    const val YOUTUBE_FORCE_SSL_SCOPE: String = "https://www.googleapis.com/auth/youtube.force-ssl"
+
+    val requestedScopes: List<String> = listOf(YOUTUBE_READONLY_SCOPE, YOUTUBE_FORCE_SSL_SCOPE)
+
     val clientId: String = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
 
     /** True when `local.properties` supplied a client ID (see README). */

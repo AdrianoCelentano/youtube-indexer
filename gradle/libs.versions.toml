@@ -31,6 +31,9 @@ composeUiTest = "1.11.4"
 # Shared libraries (Phase 1+ tickets consume these)
 coroutines = "1.11.0"
 serialization = "1.11.0"
+# Needed for a correct America/Los_Angeles day boundary: YouTube quota resets at
+# midnight Pacific, and a fixed UTC-8 offset would be an hour wrong for half the year.
+datetime = "0.8.0"
 ktor = "3.5.2"
 sqldelight = "2.3.2"
 koin = "4.2.2"
@@ -49,6 +52,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 
 # --- Ktor (YouTube Data API client, Phase 1) ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

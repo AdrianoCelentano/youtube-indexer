@@ -43,7 +43,7 @@ class GoogleSignInClient(
                     GoogleAuthConfig.clientId,
                     ResponseTypeValues.CODE,
                     GoogleAuthConfig.redirectUri,
-                ).setScopes(GoogleAuthConfig.YOUTUBE_READONLY_SCOPE)
+                ).setScopes(GoogleAuthConfig.requestedScopes)
                 .setPrompt(GoogleAuthConfig.PROMPT)
                 .setAdditionalParameters(GoogleAuthConfig.authRequestParams)
                 .build()

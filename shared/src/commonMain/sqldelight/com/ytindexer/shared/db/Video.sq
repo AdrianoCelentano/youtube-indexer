@@ -24,7 +24,15 @@ CREATE TABLE Video (
     contentHash     TEXT,
     -- Which embedding model produced the stored vector. Switching models invalidates
     -- every vector, and without this there is no way to tell which are stale.
-    embeddingModel  TEXT
+    embeddingModel  TEXT,
+    -- Plain text of the video's captions, timestamps stripped. NULL means not fetched:
+    -- at 250 quota units each, transcripts backfill over days, so most rows are NULL
+    -- most of the time.
+    transcript      TEXT,
+    transcriptFetchedAt INTEGER,
+    -- Set even when no captions exist, so a video without them is not retried forever
+    -- at 50 units per attempt.
+    transcriptAttemptedAt INTEGER
 );
 
 -- Category browse and the category filter both sort by recency within a category.
@@ -78,6 +86,25 @@ DELETE FROM Video WHERE indexedAt < ?;
 -- Records which model produced a video's vector.
 markEmbedded:
 UPDATE Video SET embeddingModel = ? WHERE videoId = ?;
+
+storeTranscript:
+UPDATE Video
+SET transcript = ?, transcriptFetchedAt = ?, transcriptAttemptedAt = ?, contentHash = ?
+WHERE videoId = ?;
+
+-- Records an attempt that produced nothing, so it is not retried on every pass.
+markTranscriptUnavailable:
+UPDATE Video SET transcriptAttemptedAt = ? WHERE videoId = ?;
+
+-- Backfill order: newest first, and never re-attempt a video already tried.
+selectNeedingTranscript:
+SELECT * FROM Video
+WHERE transcriptAttemptedAt IS NULL
+ORDER BY publishedAt DESC
+LIMIT :limit;
+
+countWithTranscript:
+SELECT COUNT(*) FROM Video WHERE transcript IS NOT NULL;
 
 -- Videos whose text has changed since their vector was built, plus those never embedded.
 selectNeedingEmbedding:

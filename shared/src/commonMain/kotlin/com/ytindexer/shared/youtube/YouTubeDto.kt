@@ -105,6 +105,20 @@ internal data class VideoCategorySnippetDto(
     @SerialName("title") val title: String? = null,
 )
 
+@Serializable
+internal data class CaptionDto(
+    @SerialName("id") val id: String,
+    @SerialName("snippet") val snippet: CaptionSnippetDto? = null,
+)
+
+@Serializable
+internal data class CaptionSnippetDto(
+    @SerialName("language") val language: String? = null,
+    /** "standard" for human-authored, "ASR" for auto-generated speech recognition. */
+    @SerialName("trackKind") val trackKind: String? = null,
+    @SerialName("isDraft") val isDraft: Boolean = false,
+)
+
 /** Error envelope returned by the API on 4xx/5xx. */
 @Serializable
 internal data class ApiErrorEnvelope(
