@@ -16,7 +16,10 @@ import com.ytindexer.shared.youtube.YouTubeVideo
  * deterministic everywhere and needs no crypto dependency -- collision resistance against
  * an attacker is not required here, only change detection.
  */
-fun contentHashOf(video: YouTubeVideo): String =
+fun contentHashOf(
+    video: YouTubeVideo,
+    transcript: String? = null,
+): String =
     fnv1a64(
         buildString {
             append(video.title)
@@ -25,6 +28,13 @@ fun contentHashOf(video: YouTubeVideo): String =
             append(FIELD_SEPARATOR)
             // Order matters: reordering tags is a real change to the embedded text.
             video.tags.joinTo(this, TAG_JOIN)
+            // Transcripts arrive long after first index. Including them means acquiring
+            // one changes the hash, which correctly marks the video for re-embedding --
+            // otherwise it would keep a vector built from the description alone.
+            if (transcript != null) {
+                append(FIELD_SEPARATOR)
+                append(transcript)
+            }
         },
     )
 

@@ -169,6 +169,8 @@ data class CategoryWithCount(
     val videoCount: Long,
 )
 
+internal fun com.ytindexer.shared.db.Video.toDomainVideo(): YouTubeVideo = toDomain()
+
 private fun com.ytindexer.shared.db.Video.toDomain(): YouTubeVideo =
     YouTubeVideo(
         id = videoId,

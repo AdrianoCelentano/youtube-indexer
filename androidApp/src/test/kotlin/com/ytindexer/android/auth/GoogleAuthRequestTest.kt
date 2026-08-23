@@ -33,7 +33,7 @@ class GoogleAuthRequestTest {
                 TEST_CLIENT_ID,
                 ResponseTypeValues.CODE,
                 Uri.parse(TEST_REDIRECT),
-            ).setScopes(GoogleAuthConfig.YOUTUBE_READONLY_SCOPE)
+            ).setScopes(GoogleAuthConfig.requestedScopes)
             .setPrompt(GoogleAuthConfig.PROMPT)
             .setAdditionalParameters(GoogleAuthConfig.authRequestParams)
             .build()
@@ -75,6 +75,15 @@ class GoogleAuthRequestTest {
     fun asks_for_the_youtube_readonly_scope() {
         assertTrue(
             buildRequest().scope.orEmpty().contains(GoogleAuthConfig.YOUTUBE_READONLY_SCOPE),
+        )
+    }
+
+    @Test
+    fun asks_for_force_ssl_so_transcripts_can_be_downloaded() {
+        // captions.download requires this scope. Requested up front because adding it
+        // after the consent screen is submitted means a second verification review.
+        assertTrue(
+            buildRequest().scope.orEmpty().contains(GoogleAuthConfig.YOUTUBE_FORCE_SSL_SCOPE),
         )
     }
 }
