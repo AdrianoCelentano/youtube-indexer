@@ -17,6 +17,8 @@ import com.ytindexer.android.auth.SignInScreen
 import com.ytindexer.android.auth.SignInViewModel
 import com.ytindexer.android.sync.SyncPanel
 import com.ytindexer.android.sync.SyncViewModel
+import com.ytindexer.android.sync.TranscriptPanel
+import com.ytindexer.android.sync.TranscriptViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +50,10 @@ private fun SignInRoute(container: AppContainer) {
     val syncViewModel: SyncViewModel = viewModel(factory = container.syncViewModelFactory())
     val syncState by syncViewModel.uiState.collectAsState()
 
+    val transcriptViewModel: TranscriptViewModel =
+        viewModel(factory = container.transcriptViewModelFactory())
+    val transcriptState by transcriptViewModel.uiState.collectAsState()
+
     SignInScreen(
         state = state,
         onSignInClick = { viewModel.signInIntent()?.let(launcher::launch) },
@@ -57,6 +63,10 @@ private fun SignInRoute(container: AppContainer) {
                 state = syncState,
                 onSyncClick = syncViewModel::sync,
                 onClearClick = syncViewModel::clearIndex,
+            )
+            TranscriptPanel(
+                state = transcriptState,
+                onFetchClick = transcriptViewModel::fetchTranscripts,
             )
         },
     )
