@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.ytindexer.android.auth.GoogleAuthConfig
 import com.ytindexer.android.auth.GoogleSignInClient
 import com.ytindexer.android.auth.SignInViewModel
+import com.ytindexer.android.search.SearchViewModel
 import com.ytindexer.android.sync.SyncViewModel
 import com.ytindexer.android.sync.TranscriptViewModel
 import com.ytindexer.shared.auth.AuthManager
@@ -40,6 +41,13 @@ class AppContainer(
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
                 SyncViewModel(indexing.indexer, indexing.store) as T
+        }
+
+    fun searchViewModelFactory(): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SearchViewModel(indexing.searchEngine, indexing.store) as T
         }
 
     fun transcriptViewModelFactory(): ViewModelProvider.Factory =

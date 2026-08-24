@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
  * screens something shared to consume so the module wiring is exercised.
  */
 object Dimens {
+    val SpaceXs = 2.dp
     val SpaceS = 8.dp
     val SpaceM = 16.dp
     val SpaceL = 24.dp
