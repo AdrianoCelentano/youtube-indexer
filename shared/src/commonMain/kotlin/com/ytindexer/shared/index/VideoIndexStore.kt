@@ -29,6 +29,24 @@ class VideoIndexStore(
     ) = withContext(ioDispatcher) {
         database.transaction {
             videos.forEach { video ->
+                // Same transaction as the row itself: a crash between the two would leave
+                // a video that exists but can never be found, or a search hit pointing at
+                // nothing.
+                database.videoSearchQueries.deleteRow(video.id)
+                database.videoSearchQueries.insertRow(
+                    videoId = video.id,
+                    title = video.title,
+                    description = video.description,
+                    tags = video.tags.joinToString(" "),
+                    // Preserved separately: a re-index must not wipe a transcript that
+                    // cost 250 quota units to fetch.
+                    transcript =
+                        database.videoQueries
+                            .selectById(video.id)
+                            .executeAsOneOrNull()
+                            ?.transcript
+                            .orEmpty(),
+                )
                 database.videoQueries.upsert(
                     videoId = video.id,
                     title = video.title,
@@ -132,9 +150,13 @@ class VideoIndexStore(
     suspend fun pruneNotSeenSince(runStartedAtEpochSeconds: Long): Long =
         withContext(ioDispatcher) {
             database.transactionWithResult {
-                val before = database.videoQueries.countAll().executeAsOne()
+                val stale =
+                    database.videoQueries
+                        .selectIndexedBefore(runStartedAtEpochSeconds)
+                        .executeAsList()
+                stale.forEach { database.videoSearchQueries.deleteRow(it) }
                 database.videoQueries.deleteIndexedBefore(runStartedAtEpochSeconds)
-                before - database.videoQueries.countAll().executeAsOne()
+                stale.size.toLong()
             }
         }
 
@@ -155,6 +177,7 @@ class VideoIndexStore(
         withContext(ioDispatcher) {
             database.transaction {
                 database.videoQueries.deleteAll()
+                database.videoSearchQueries.deleteAll()
                 database.categoryQueries.deleteAll()
                 database.syncStateQueries.deleteAll()
             }

@@ -1,0 +1,20 @@
+-- Migration 3 -> 4: full-text search index.
+--
+-- FTS4 rather than FTS5 -- see VideoSearch.sq for the reasoning. FTS5 would additionally
+-- be risky *here* specifically: creating an FTS5 table in a migration succeeds on a
+-- device whose SQLite has it and fails on one that does not, breaking the upgrade for
+-- exactly the users least able to diagnose it.
+
+CREATE VIRTUAL TABLE VideoSearch USING fts4(
+    videoId,
+    title,
+    description,
+    tags,
+    transcript,
+    tokenize=unicode61
+);
+
+-- Backfill from what is already indexed, so upgrading users can search immediately
+-- rather than having to re-run a full index that costs API quota.
+INSERT INTO VideoSearch(videoId, title, description, tags, transcript)
+SELECT videoId, title, description, tags, COALESCE(transcript, '') FROM Video;
