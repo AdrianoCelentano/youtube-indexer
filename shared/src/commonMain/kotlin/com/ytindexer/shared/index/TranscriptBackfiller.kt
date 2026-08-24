@@ -166,6 +166,19 @@ class TranscriptBackfiller(
         val now = clock.nowEpochSeconds()
         val video = database.videoQueries.selectById(videoId).executeAsOneOrNull()
 
+        // Refresh the search row so a transcript that cost 250 quota units is actually
+        // searchable; without this it would sit in the table but never match.
+        video?.let {
+            database.videoSearchQueries.deleteRow(videoId)
+            database.videoSearchQueries.insertRow(
+                videoId = videoId,
+                title = it.title,
+                description = it.description,
+                tags = it.tags.replace('\n', ' '),
+                transcript = text,
+            )
+        }
+
         database.videoQueries.storeTranscript(
             transcript = text,
             transcriptFetchedAt = now,

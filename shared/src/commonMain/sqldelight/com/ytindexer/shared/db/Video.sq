@@ -112,3 +112,7 @@ SELECT * FROM Video WHERE embeddingModel IS NULL OR embeddingModel != ? LIMIT :l
 
 deleteAll:
 DELETE FROM Video;
+
+-- Ids about to be pruned, so their search rows can be removed in the same transaction.
+selectIndexedBefore:
+SELECT videoId FROM Video WHERE indexedAt < ?;

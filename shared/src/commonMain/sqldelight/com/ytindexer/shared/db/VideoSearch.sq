@@ -1,0 +1,41 @@
+-- Full-text index over the searchable text of each video.
+--
+-- FTS4, not FTS5, and the reason is specific to this stack rather than to Android.
+--
+-- FTS5 *is* reachable at minSdk 24 -- Room 3.0 supports it via @Fts5 -- but only by
+-- bundling a SQLite build (androidx.sqlite:sqlite-bundled) rather than using the
+-- framework one, whose FTS5 support is not guaranteed. SQLDelight has no androidx
+-- driver, so adopting that route means writing a custom SqlDriver over BundledSQLiteDriver
+-- and shipping several MB of native SQLite per ABI.
+--
+-- What FTS5 would buy is mainly built-in bm25 ranking, and ranking here happens in Kotlin
+-- over the candidate set anyway -- which is easier to explain, test and tune per field.
+-- So the bundled-SQLite cost buys very little today.
+--
+-- If ranking quality later proves insufficient, switching is additive: rebuild this table
+-- as FTS5 in a migration and drop the Kotlin scorer.
+CREATE VIRTUAL TABLE VideoSearch USING fts4(
+    videoId,
+    title,
+    description,
+    tags,
+    transcript,
+    tokenize=unicode61
+);
+
+insertRow:
+INSERT INTO VideoSearch(videoId, title, description, tags, transcript)
+VALUES (?, ?, ?, ?, ?);
+
+deleteRow:
+DELETE FROM VideoSearch WHERE videoId = ?;
+
+deleteAll:
+DELETE FROM VideoSearch;
+
+-- Candidate retrieval only; relevance ordering happens in Kotlin.
+matching:
+SELECT videoId FROM VideoSearch WHERE VideoSearch MATCH :query LIMIT :limit;
+
+countAll:
+SELECT COUNT(*) FROM VideoSearch;
