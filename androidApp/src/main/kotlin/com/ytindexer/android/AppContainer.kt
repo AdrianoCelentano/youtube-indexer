@@ -43,6 +43,9 @@ class AppContainer(
                 SyncViewModel(indexing.indexer, indexing.store) as T
         }
 
+    /** Exposes the indexing graph so first-launch behaviour can be exercised in tests. */
+    internal fun indexingForTest() = indexing
+
     fun searchViewModelFactory(): ViewModelProvider.Factory =
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

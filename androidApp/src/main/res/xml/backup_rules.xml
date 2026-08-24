@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy auto-backup rules (Android 11 and below).
+
+  The auth preferences must never be backed up. Their contents are encrypted with a
+  Keystore master key, and Keystore keys are deliberately not included in backups. A
+  restored file therefore arrives without the key that can read it, so opening it fails
+  on the first launch after a fresh install. That is exactly how this surfaced: updates
+  kept both the key and the file, fresh installs got the file alone.
+
+  Excluding it means a reinstall asks the user to sign in again, which is the correct
+  outcome anyway.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="yt_indexer_auth.xml" />
+</full-backup-content>
