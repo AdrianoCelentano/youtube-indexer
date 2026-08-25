@@ -1,0 +1,15 @@
+-- Migration 4 -> 5: index subscribed channels instead of the user's own uploads.
+--
+-- Videos now come from many channels, so each row records which one it came from.
+ALTER TABLE Video ADD COLUMN channelId TEXT;
+ALTER TABLE Video ADD COLUMN channelTitle TEXT;
+
+CREATE INDEX video_channel_published ON Video(channelId, publishedAt DESC);
+
+-- Existing rows are the user's own uploads, which are no longer what this index means.
+-- Leaving them would silently mix two different notions of "my videos" and make result
+-- counts inexplicable. Metadata is cheap to re-fetch (about 1 quota unit per 50 videos),
+-- so clearing and re-syncing is the honest option.
+DELETE FROM Video;
+DELETE FROM VideoSearch;
+DELETE FROM SyncState;

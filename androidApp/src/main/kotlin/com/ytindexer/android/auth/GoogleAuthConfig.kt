@@ -16,15 +16,14 @@ object GoogleAuthConfig {
     const val YOUTUBE_READONLY_SCOPE: String = "https://www.googleapis.com/auth/youtube.readonly"
 
     /**
-     * Required by `captions.download`, which is how transcripts are indexed.
+     * Read-only is sufficient and deliberate.
      *
-     * Broader than readonly (it permits writes), so Google scrutinises it harder during
-     * verification. Requested up front deliberately: adding a scope after the consent
-     * screen has been submitted means re-submitting and waiting for another review.
+     * `youtube.force-ssl` was requested while transcripts were in scope, but
+     * `captions.download` requires permission to *edit* the video, so it can never work
+     * for other people's uploads. Asking for a write-capable scope the app cannot use is
+     * exactly what Google's verification review rejects.
      */
-    const val YOUTUBE_FORCE_SSL_SCOPE: String = "https://www.googleapis.com/auth/youtube.force-ssl"
-
-    val requestedScopes: List<String> = listOf(YOUTUBE_READONLY_SCOPE, YOUTUBE_FORCE_SSL_SCOPE)
+    val requestedScopes: List<String> = listOf(YOUTUBE_READONLY_SCOPE)
 
     val clientId: String = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
 

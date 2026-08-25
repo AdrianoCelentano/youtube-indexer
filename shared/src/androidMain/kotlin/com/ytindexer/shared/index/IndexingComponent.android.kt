@@ -18,9 +18,8 @@ import kotlinx.serialization.json.Json
  * details of `:shared`.
  */
 class IndexingComponent internal constructor(
-    val indexer: VideoIndexer,
+    val indexer: SubscriptionIndexer,
     val store: VideoIndexStore,
-    val backfiller: TranscriptBackfiller,
     val quotaLedger: QuotaLedger,
     val searchEngine: SearchEngine,
 )
@@ -45,20 +44,13 @@ fun createIndexingComponent(
 
     return IndexingComponent(
         indexer =
-            VideoIndexer(
+            SubscriptionIndexer(
                 api = api,
                 store = store,
                 database = database,
                 ioDispatcher = Dispatchers.IO,
             ),
         store = store,
-        backfiller =
-            TranscriptBackfiller(
-                api = api,
-                database = database,
-                ledger = ledger,
-                ioDispatcher = Dispatchers.IO,
-            ),
         quotaLedger = ledger,
         searchEngine = SearchEngine(database, store, Dispatchers.IO),
     )

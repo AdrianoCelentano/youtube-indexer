@@ -1,9 +1,10 @@
 # YouTube Indexer
 
-Kotlin Multiplatform app that indexes the signed-in user's own YouTube videos (title,
-description, tags, category) into a local searchable store, so they can be found again
-by a free-text prompt and/or a category filter. Ships two Android surfaces: a phone/tablet
-app and an Android TV app, sharing one business-logic core.
+Kotlin Multiplatform app that indexes the most recent videos from every channel the
+signed-in user is subscribed to (title, description, tags, category) into a local
+searchable store, so they can be found again by a free-text prompt and/or a category or
+channel filter. Ships two Android surfaces: a phone/tablet app and an Android TV app,
+sharing one business-logic core.
 
 Implementation plan and ticket board live in Notion.
 

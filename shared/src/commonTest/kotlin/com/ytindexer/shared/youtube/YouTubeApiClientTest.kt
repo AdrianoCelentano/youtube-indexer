@@ -60,39 +60,54 @@ private fun ok(body: String) = HttpStatusCode.OK to body
 
 class YouTubeApiClientTest {
     @Test
-    fun my_channel_extracts_the_uploads_playlist() =
+    fun channels_resolve_to_titles_and_uploads_playlists() =
         runTest {
             val engine =
                 RecordingEngine { _, _ ->
                     ok(
                         """
-                        {"items":[{"id":"UC123","snippet":{"title":"My Channel"},
+                        {"items":[{"id":"UC123","snippet":{"title":"Some Channel"},
                         "contentDetails":{"relatedPlaylists":{"uploads":"UU123"}}}]}
                         """.trimIndent(),
                     )
                 }
-            val channel = YouTubeApiClient(engine.client(), authManager()).myChannel()
+            val channel = YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC123")).single()
 
-            assertEquals("UC123", channel.id)
+            assertEquals("UC123", channel.channelId)
             assertEquals("UU123", channel.uploadsPlaylistId)
-            assertEquals("My Channel", channel.title)
+            assertEquals("Some Channel", channel.title)
         }
 
     @Test
-    fun my_channel_reports_accounts_with_no_channel() =
+    fun a_channel_without_an_uploads_playlist_is_skipped_not_fatal() =
         runTest {
-            val engine = RecordingEngine { _, _ -> ok("""{"items":[]}""") }
+            // One dead subscription must not fail the whole sync.
+            val engine = RecordingEngine { _, _ -> ok("""{"items":[{"id":"UC1"}]}""") }
 
-            assertFailsWith<YouTubeApiError.NotFound> {
-                YouTubeApiClient(engine.client(), authManager()).myChannel()
-            }
+            assertEquals(
+                emptyList(),
+                YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1")),
+            )
+        }
+
+    @Test
+    fun subscriptions_are_paged() =
+        runTest {
+            val engine =
+                RecordingEngine { _, _ ->
+                    ok("""{"items":[{"snippet":{"resourceId":{"channelId":"UC1"}}}],"nextPageToken":"P2"}""")
+                }
+            val page = YouTubeApiClient(engine.client(), authManager()).subscriptionPage()
+
+            assertEquals(listOf("UC1"), page.items)
+            assertEquals("P2", page.nextPageToken)
         }
 
     @Test
     fun requests_carry_the_bearer_token() =
         runTest {
             val engine = RecordingEngine { _, _ -> ok("""{"items":[]}""") }
-            runCatching { YouTubeApiClient(engine.client(), authManager()).myChannel() }
+            runCatching { YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1")) }
 
             assertEquals("Bearer access-1", engine.requests.single().headers["Authorization"])
         }
@@ -172,7 +187,7 @@ class YouTubeApiClientTest {
             val engine = RecordingEngine { _, _ -> ok("""{"items":[]}""") }
             val client = YouTubeApiClient(engine.client(), authManager())
 
-            runCatching { client.myChannel() }
+            runCatching { client.channels(listOf("UC1")) }
             client.playlistVideoIds("UU123")
             client.videosByIds(listOf("v1"))
             client.videoCategories()
@@ -244,7 +259,7 @@ class YouTubeApiClientTest {
                     }
                 }
 
-            val channel = YouTubeApiClient(engine.client(), authManager()).myChannel()
+            val channel = YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1")).single()
 
             assertEquals("UU1", channel.uploadsPlaylistId)
             assertEquals(2, engine.requests.size)
@@ -266,7 +281,7 @@ class YouTubeApiClientTest {
                 }
 
             assertFailsWith<YouTubeApiError.Unauthorized> {
-                YouTubeApiClient(engine.client(), authManager()).myChannel()
+                YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1"))
             }
             assertEquals(2, engine.requests.size, "exactly one retry, then give up")
         }
@@ -284,7 +299,7 @@ class YouTubeApiClientTest {
 
             val error =
                 assertFailsWith<YouTubeApiError.QuotaExceeded> {
-                    YouTubeApiClient(engine.client(), authManager()).myChannel()
+                    YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1"))
                 }
             assertEquals("quotaExceeded", error.reason)
         }
@@ -299,7 +314,7 @@ class YouTubeApiClientTest {
                 }
 
             assertFailsWith<YouTubeApiError.Forbidden> {
-                YouTubeApiClient(engine.client(), authManager()).myChannel()
+                YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1"))
             }
         }
 
@@ -309,7 +324,7 @@ class YouTubeApiClientTest {
             val engine = RecordingEngine { _, _ -> HttpStatusCode.InternalServerError to """{}""" }
 
             assertFailsWith<YouTubeApiError.Transient> {
-                YouTubeApiClient(engine.client(), authManager()).myChannel()
+                YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1"))
             }
         }
 
@@ -319,7 +334,7 @@ class YouTubeApiClientTest {
             val engine = RecordingEngine { _, _ -> HttpStatusCode.TooManyRequests to """{}""" }
 
             assertFailsWith<YouTubeApiError.Transient> {
-                YouTubeApiClient(engine.client(), authManager()).myChannel()
+                YouTubeApiClient(engine.client(), authManager()).channels(listOf("UC1"))
             }
         }
 }

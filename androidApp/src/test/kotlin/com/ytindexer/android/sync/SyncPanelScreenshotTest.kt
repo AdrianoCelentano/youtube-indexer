@@ -47,7 +47,16 @@ class SyncPanelScreenshotTest {
     fun idleEmpty() = capture("idle_empty", SyncUiState.Idle(indexedTotal = 0))
 
     @Test
-    fun running() = capture("running", SyncUiState.Running(videosIndexed = 150, pages = 3))
+    fun running() =
+        capture(
+            "running",
+            SyncUiState.Running(
+                videosIndexed = 150,
+                channelsDone = 3,
+                channelsTotal = 12,
+                currentChannel = "Some Channel",
+            ),
+        )
 
     @Test
     fun done() =
@@ -55,6 +64,7 @@ class SyncPanelScreenshotTest {
             "done",
             SyncUiState.Done(
                 videosIndexed = 214,
+                channels = 12,
                 indexedTotal = 214,
                 sample =
                     listOf(
@@ -73,6 +83,7 @@ class SyncPanelScreenshotTest {
             "done_bad_mapping",
             SyncUiState.Done(
                 videosIndexed = 2,
+                channels = 1,
                 indexedTotal = 2,
                 sample =
                     listOf(

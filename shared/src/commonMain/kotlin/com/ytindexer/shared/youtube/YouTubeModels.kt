@@ -13,6 +13,10 @@ data class YouTubeVideo(
     val tags: List<String>,
     val categoryId: String?,
     val durationSeconds: Long?,
+    // Appended with defaults so existing positional construction keeps working; videos
+    // now come from many channels rather than only the signed-in user's own.
+    val channelId: String? = null,
+    val channelTitle: String? = null,
 )
 
 /** One page of results plus the cursor needed to fetch the next. */
@@ -22,6 +26,17 @@ data class Page<T>(
 ) {
     val hasMore: Boolean get() = nextPageToken != null
 }
+
+/** A channel the signed-in user is subscribed to. */
+data class SubscribedChannel(
+    val channelId: String,
+    val title: String,
+    /**
+     * Playlist holding every upload on that channel. Paging it costs 1 quota unit per 50
+     * videos, where `search.list` would cost 100 per call.
+     */
+    val uploadsPlaylistId: String,
+)
 
 /** A caption track available for a video. */
 data class CaptionTrack(
