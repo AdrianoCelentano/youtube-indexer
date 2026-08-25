@@ -8,6 +8,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -79,11 +80,10 @@ class GoogleAuthRequestTest {
     }
 
     @Test
-    fun asks_for_force_ssl_so_transcripts_can_be_downloaded() {
-        // captions.download requires this scope. Requested up front because adding it
-        // after the consent screen is submitted means a second verification review.
-        assertTrue(
-            buildRequest().scope.orEmpty().contains(GoogleAuthConfig.YOUTUBE_FORCE_SSL_SCOPE),
-        )
+    fun does_not_ask_for_write_capable_scopes() {
+        // force-ssl was dropped with transcripts: captions.download needs edit permission
+        // on the video, so it cannot work for subscribed channels. Requesting an unused
+        // write scope is what verification review rejects.
+        assertFalse(buildRequest().scope.orEmpty().contains("force-ssl"))
     }
 }

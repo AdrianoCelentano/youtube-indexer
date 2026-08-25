@@ -38,14 +38,11 @@ class VideoIndexStore(
                     title = video.title,
                     description = video.description,
                     tags = video.tags.joinToString(" "),
-                    // Preserved separately: a re-index must not wipe a transcript that
-                    // cost 250 quota units to fetch.
-                    transcript =
-                        database.videoQueries
-                            .selectById(video.id)
-                            .executeAsOneOrNull()
-                            ?.transcript
-                            .orEmpty(),
+                    // Always empty: transcripts are unavailable for other people's
+                    // videos, since captions.download requires edit permission. The
+                    // column is retained rather than migrated away because dropping a
+                    // column in SQLite means rebuilding the table for no benefit.
+                    transcript = "",
                 )
                 database.videoQueries.upsert(
                     videoId = video.id,
@@ -57,6 +54,8 @@ class VideoIndexStore(
                     categoryId = video.categoryId,
                     durationSeconds = video.durationSeconds,
                     indexedAt = indexedAtEpochSeconds,
+                    channelId = video.channelId,
+                    channelTitle = video.channelTitle,
                     contentHash = contentHashOf(video),
                     videoId_ = video.id,
                 )
@@ -69,12 +68,6 @@ class VideoIndexStore(
             database.transaction {
                 categories.forEach { database.categoryQueries.upsert(it.id, it.title) }
             }
-        }
-
-    /** How many videos have a transcript stored. */
-    suspend fun transcribedCount(): Long =
-        withContext(ioDispatcher) {
-            database.videoQueries.countWithTranscript().executeAsOne()
         }
 
     suspend fun videoCount(): Long =
@@ -103,6 +96,21 @@ class VideoIndexStore(
                 .selectByCategory(categoryId, limit, offset)
                 .executeAsList()
                 .map { it.toDomain() }
+        }
+
+    /** Channels with indexed videos, for a channel filter. */
+    suspend fun populatedChannels(): List<ChannelWithCount> =
+        withContext(ioDispatcher) {
+            database.videoQueries
+                .selectPopulatedChannels()
+                .executeAsList()
+                .map { row ->
+                    ChannelWithCount(
+                        row.channelId,
+                        row.channelTitle.orEmpty().ifEmpty { row.channelId },
+                        row.videoCount,
+                    )
+                }
         }
 
     /** Only categories that actually contain indexed videos, so the filter shows no dead options. */
@@ -160,18 +168,6 @@ class VideoIndexStore(
             }
         }
 
-    /** Videos whose vector is missing or was built by a different model. */
-    suspend fun videosNeedingEmbedding(
-        model: String,
-        limit: Long,
-    ): List<YouTubeVideo> =
-        withContext(ioDispatcher) {
-            database.videoQueries
-                .selectNeedingEmbedding(model, limit)
-                .executeAsList()
-                .map { it.toDomain() }
-        }
-
     /** Wipes the index. Used on sign-out and when switching accounts. */
     suspend fun clear() =
         withContext(ioDispatcher) {
@@ -192,6 +188,12 @@ class VideoIndexStore(
     }
 }
 
+data class ChannelWithCount(
+    val channelId: String,
+    val title: String,
+    val videoCount: Long,
+)
+
 data class CategoryWithCount(
     val categoryId: String,
     val title: String,
@@ -203,6 +205,8 @@ internal fun com.ytindexer.shared.db.Video.toDomainVideo(): YouTubeVideo = toDom
 private fun com.ytindexer.shared.db.Video.toDomain(): YouTubeVideo =
     YouTubeVideo(
         id = videoId,
+        channelId = channelId,
+        channelTitle = channelTitle,
         title = title,
         description = description,
         publishedAt = publishedAt,

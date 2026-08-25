@@ -261,18 +261,4 @@ class SearchEngineTest {
 
             assertEquals(1, f.engine.search("sourdough").size)
         }
-
-    @Test
-    fun re_indexing_preserves_a_transcript_in_the_search_index() =
-        runTest {
-            // Re-indexing metadata must not silently make a 250-unit transcript
-            // unsearchable.
-            val f = Fixture()
-            f.index(video("v1", title = "Vlog"))
-            f.addTranscript("v1", "we talk about sourdough here")
-
-            f.index(video("v1", title = "Vlog"))
-
-            assertEquals(listOf("v1"), f.engine.search("sourdough").map { it.video.id })
-        }
 }

@@ -43,20 +43,22 @@ internal fun SyncPanel(
                     text = indexedLabel(state.indexedTotal),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Button(onClick = onSyncClick) { Text("Sync my videos") }
+                Button(onClick = onSyncClick) { Text("Sync subscriptions") }
             }
 
             is SyncUiState.Running -> {
                 CircularProgressIndicator()
                 Text(
-                    text = "Indexing… ${state.videosIndexed} videos, ${state.pages} pages",
+                    text = syncProgressText(state),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
             is SyncUiState.Done -> {
                 Text(
-                    text = "Indexed ${state.videosIndexed} videos (${state.indexedTotal} stored)",
+                    text =
+                        "Indexed ${state.videosIndexed} videos from ${state.channels} channels " +
+                            "(${state.indexedTotal} stored)",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 SampleVideos(state.sample)
@@ -136,6 +138,13 @@ private fun formatDuration(totalSeconds: Long): String {
     val seconds = totalSeconds % SECONDS_PER_MINUTE
     return "$minutes:${seconds.toString().padStart(2, '0')}"
 }
+
+private fun syncProgressText(state: SyncUiState.Running): String =
+    if (state.channelsTotal == 0) {
+        "Finding your subscriptions…"
+    } else {
+        "${state.channelsDone}/${state.channelsTotal} channels · ${state.videosIndexed} videos\n${state.currentChannel}"
+    }
 
 private fun indexedLabel(total: Long): String = if (total == 0L) "No videos indexed yet." else "$total videos indexed."
 

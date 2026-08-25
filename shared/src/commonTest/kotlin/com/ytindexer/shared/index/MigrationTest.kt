@@ -56,7 +56,7 @@ class MigrationTest {
     }
 
     @Test
-    fun migrating_from_v1_preserves_existing_indexed_videos() {
+    fun migrating_from_v1_clears_the_index_because_its_meaning_changed() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         createV1Database(driver)
 
@@ -72,14 +72,19 @@ class MigrationTest {
         YtIndexerDatabase.Schema.migrate(driver, 1, YtIndexerDatabase.Schema.version)
 
         val database = YtIndexerDatabase(driver)
-        val video = database.videoQueries.selectById("v1").executeAsOne()
 
-        assertEquals("Existing video", video.title, "a full index costs quota; it must not be discarded")
-        assertEquals("28", video.categoryId)
+        // Deliberate. Rows indexed before v5 are the user's own uploads, whereas the
+        // index now means "videos from subscribed channels". Keeping them would silently
+        // mix two different notions of the same table and make result counts
+        // inexplicable. Metadata is about 1 quota unit per 50 videos, so re-syncing is
+        // cheap -- unlike transcripts, which is why this would have been the wrong call
+        // while they existed.
+        assertEquals(0L, database.videoQueries.countAll().executeAsOne())
+        assertEquals(0L, database.videoSearchQueries.countAll().executeAsOne())
     }
 
     @Test
-    fun new_columns_are_null_on_migrated_rows() {
+    fun a_migrated_database_accepts_rows_with_the_new_channel_columns() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         createV1Database(driver)
         driver.execute(
@@ -93,18 +98,29 @@ class MigrationTest {
 
         YtIndexerDatabase.Schema.migrate(driver, 1, YtIndexerDatabase.Schema.version)
         val database = YtIndexerDatabase(driver)
-        val video = database.videoQueries.selectById("v1").executeAsOne()
 
-        // NULL reads correctly as "hash unknown" and "not yet embedded", so pre-existing
-        // rows are picked up by the first embedding pass rather than being skipped.
-        assertNull(video.contentHash)
-        assertNull(video.embeddingModel)
+        database.videoQueries.upsert(
+            videoId = "v2",
+            title = "t",
+            description = "d",
+            publishedAt = "2026-01-01T00:00:00Z",
+            thumbnailUrl = null,
+            tags = "",
+            categoryId = null,
+            durationSeconds = null,
+            indexedAt = 1,
+            channelId = "UC9",
+            channelTitle = "Chan",
+            contentHash = null,
+            videoId_ = "v2",
+        )
+
         assertEquals(
-            1,
+            "UC9",
             database.videoQueries
-                .selectNeedingEmbedding("model-a", 10)
-                .executeAsList()
-                .size,
+                .selectById("v2")
+                .executeAsOne()
+                .channelId,
         )
     }
 
@@ -152,6 +168,8 @@ class MigrationTest {
             categoryId = null,
             durationSeconds = null,
             indexedAt = 1,
+            channelId = "UC1",
+            channelTitle = "Chan",
             contentHash = "abc",
             videoId_ = "v1",
         )

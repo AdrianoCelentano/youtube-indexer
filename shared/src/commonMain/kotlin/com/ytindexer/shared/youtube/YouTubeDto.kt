@@ -70,6 +70,8 @@ internal data class VideoContentDetailsDto(
 @Serializable
 internal data class SnippetDto(
     @SerialName("title") val title: String? = null,
+    @SerialName("channelId") val channelId: String? = null,
+    @SerialName("channelTitle") val channelTitle: String? = null,
     @SerialName("description") val description: String? = null,
     @SerialName("publishedAt") val publishedAt: String? = null,
     @SerialName("tags") val tags: List<String> = emptyList(),
@@ -103,6 +105,22 @@ internal data class VideoCategoryDto(
 @Serializable
 internal data class VideoCategorySnippetDto(
     @SerialName("title") val title: String? = null,
+)
+
+@Serializable
+internal data class SubscriptionDto(
+    @SerialName("snippet") val snippet: SubscriptionSnippetDto? = null,
+)
+
+@Serializable
+internal data class SubscriptionSnippetDto(
+    @SerialName("title") val title: String? = null,
+    @SerialName("resourceId") val resourceId: ResourceIdDto? = null,
+)
+
+@Serializable
+internal data class ResourceIdDto(
+    @SerialName("channelId") val channelId: String? = null,
 )
 
 @Serializable

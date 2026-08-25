@@ -32,19 +32,23 @@ CREATE TABLE Video (
     transcriptFetchedAt INTEGER,
     -- Set even when no captions exist, so a video without them is not retried forever
     -- at 50 units per attempt.
-    transcriptAttemptedAt INTEGER
+    transcriptAttemptedAt INTEGER,
+    -- Which subscribed channel this video came from.
+    channelId       TEXT,
+    channelTitle    TEXT
 );
 
 -- Category browse and the category filter both sort by recency within a category.
 CREATE INDEX video_category_published ON Video(categoryId, publishedAt DESC);
 CREATE INDEX video_published ON Video(publishedAt DESC);
+CREATE INDEX video_channel_published ON Video(channelId, publishedAt DESC);
 
 -- INSERT OR REPLACE rather than ON CONFLICT DO UPDATE: UPSERT needs SQLite 3.24,
 -- which only arrived in Android API 30, and this module targets minSdk 24. Since every
 -- column is supplied on every write, REPLACE is semantically identical here.
 upsert:
-INSERT OR REPLACE INTO Video(videoId, title, description, publishedAt, thumbnailUrl, tags, categoryId, durationSeconds, indexedAt, contentHash, embeddingModel)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+INSERT OR REPLACE INTO Video(videoId, title, description, publishedAt, thumbnailUrl, tags, categoryId, durationSeconds, indexedAt, channelId, channelTitle, contentHash, embeddingModel)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
     -- Preserve any existing embeddingModel: REPLACE would otherwise null it on every
     -- re-index, silently orphaning vectors that are still valid.
     (SELECT embeddingModel FROM Video WHERE videoId = ?));
@@ -116,3 +120,14 @@ DELETE FROM Video;
 -- Ids about to be pruned, so their search rows can be removed in the same transaction.
 selectIndexedBefore:
 SELECT videoId FROM Video WHERE indexedAt < ?;
+
+-- Channels that actually have indexed videos, for a channel filter.
+selectPopulatedChannels:
+SELECT channelId, channelTitle, COUNT(*) AS videoCount
+FROM Video
+WHERE channelId IS NOT NULL
+GROUP BY channelId, channelTitle
+ORDER BY videoCount DESC;
+
+selectByChannel:
+SELECT * FROM Video WHERE channelId = ? ORDER BY publishedAt DESC LIMIT :limit;

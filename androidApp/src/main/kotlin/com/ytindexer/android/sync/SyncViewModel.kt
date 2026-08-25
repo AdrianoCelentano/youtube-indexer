@@ -2,9 +2,9 @@ package com.ytindexer.android.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ytindexer.shared.index.IndexOutcome
+import com.ytindexer.shared.index.SubscriptionIndexOutcome
+import com.ytindexer.shared.index.SubscriptionIndexer
 import com.ytindexer.shared.index.VideoIndexStore
-import com.ytindexer.shared.index.VideoIndexer
 import com.ytindexer.shared.youtube.YouTubeApiError
 import com.ytindexer.shared.youtube.YouTubeVideo
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +21,9 @@ sealed interface SyncUiState {
 
     data class Running(
         val videosIndexed: Int,
-        val pages: Int,
+        val channelsDone: Int,
+        val channelsTotal: Int,
+        val currentChannel: String,
     ) : SyncUiState
 
     /**
@@ -30,6 +32,7 @@ sealed interface SyncUiState {
      */
     data class Done(
         val videosIndexed: Int,
+        val channels: Int,
         val indexedTotal: Long,
         val sample: List<YouTubeVideo>,
     ) : SyncUiState
@@ -48,7 +51,7 @@ sealed interface SyncUiState {
 }
 
 class SyncViewModel(
-    private val indexer: VideoIndexer,
+    private val indexer: SubscriptionIndexer,
     private val store: VideoIndexStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.Idle(indexedTotal = 0))
@@ -62,34 +65,42 @@ class SyncViewModel(
 
     fun sync() {
         viewModelScope.launch {
-            _uiState.value = SyncUiState.Running(videosIndexed = 0, pages = 0)
+            _uiState.value =
+                SyncUiState.Running(
+                    videosIndexed = 0,
+                    channelsDone = 0,
+                    channelsTotal = 0,
+                    currentChannel = "",
+                )
 
             _uiState.value =
                 try {
-                    // Category names first so the sample below can show them. Failures
-                    // here are swallowed inside the indexer -- they are cosmetic.
-                    indexer.refreshCategories()
-
                     val outcome =
-                        indexer.indexChannel { progress ->
+                        indexer.indexSubscriptions { progress ->
                             _uiState.value =
-                                SyncUiState.Running(progress.videosIndexed, progress.pagesFetched)
+                                SyncUiState.Running(
+                                    videosIndexed = progress.videosIndexed,
+                                    channelsDone = progress.channelsDone,
+                                    channelsTotal = progress.channelsTotal,
+                                    currentChannel = progress.currentChannel,
+                                )
                         }
 
                     when (outcome) {
-                        is IndexOutcome.Completed -> {
+                        is SubscriptionIndexOutcome.Completed -> {
                             SyncUiState.Done(
                                 videosIndexed = outcome.videosIndexed,
+                                channels = outcome.channels,
                                 indexedTotal = store.videoCount(),
                                 sample = store.recentVideos(limit = SAMPLE_SIZE),
                             )
                         }
 
-                        is IndexOutcome.QuotaExhausted -> {
+                        is SubscriptionIndexOutcome.QuotaExhausted -> {
                             SyncUiState.QuotaExhausted(outcome.videosIndexed, store.videoCount())
                         }
 
-                        is IndexOutcome.Interrupted -> {
+                        is SubscriptionIndexOutcome.Interrupted -> {
                             SyncUiState.Failed(
                                 outcome.cause.message ?: "Sync interrupted",
                                 outcome.videosIndexed,
