@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import com.ytindexer.shared.youtube.YouTubeVideo
 import com.ytindexer.ui.Dimens
+import com.ytindexer.ui.sync.SyncUiState
 
 /**
  * Sync controls and results.

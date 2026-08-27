@@ -9,6 +9,7 @@ import com.ytindexer.shared.index.CategoryWithCount
 import com.ytindexer.shared.search.MatchFields
 import com.ytindexer.shared.search.SearchResult
 import com.ytindexer.shared.youtube.YouTubeVideo
+import com.ytindexer.ui.search.SearchUiState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

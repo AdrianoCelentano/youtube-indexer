@@ -1,4 +1,4 @@
-package com.ytindexer.android.sync
+package com.ytindexer.ui.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,6 +50,13 @@ sealed interface SyncUiState {
     ) : SyncUiState
 }
 
+/**
+ * Drives the sync panel on both app surfaces.
+ *
+ * Lives in `:ui-common` alongside [com.ytindexer.ui.search.SearchViewModel] for the same
+ * reason: the phone and TV panels render this state with different widgets, but the sync
+ * state machine itself does not vary by platform.
+ */
 class SyncViewModel(
     private val indexer: SubscriptionIndexer,
     private val store: VideoIndexStore,

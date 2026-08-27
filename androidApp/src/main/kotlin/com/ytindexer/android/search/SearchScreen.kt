@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,8 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.ytindexer.shared.search.SearchResult
 import com.ytindexer.ui.Dimens
+import com.ytindexer.ui.VideoThumbnail
+import com.ytindexer.ui.search.SearchUiState
 
 /**
  * Search over the local index.
@@ -114,27 +118,36 @@ private fun ResultRow(
     result: SearchResult,
     onClick: () -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = Dimens.SpaceS),
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceXs),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
     ) {
-        Text(
-            text = result.video.title.ifBlank { "(untitled)" },
-            style = MaterialTheme.typography.bodyLarge,
+        VideoThumbnail(
+            url = result.video.thumbnailUrl,
+            contentDescription = null,
+            modifier = Modifier.width(ThumbnailWidth),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceXs),
         ) {
             Text(
-                text = result.video.publishedAt.take(DATE_LENGTH),
-                style = MaterialTheme.typography.labelSmall,
+                text = result.video.title.ifBlank { "(untitled)" },
+                style = MaterialTheme.typography.bodyLarge,
             )
-            matchLabel(result)?.let {
-                // Showing where the hit came from explains why a result is here at all,
-                // which matters most for transcript matches whose words appear nowhere
-                // visible on the row.
-                Text(text = it, style = MaterialTheme.typography.labelSmall)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = result.video.publishedAt.take(DATE_LENGTH),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                matchLabel(result)?.let {
+                    // Showing where the hit came from explains why a result is here at
+                    // all, which matters most for transcript matches whose words appear
+                    // nowhere visible on the row.
+                    Text(text = it, style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }
@@ -149,3 +162,4 @@ private fun matchLabel(result: SearchResult): String? =
     }
 
 private const val DATE_LENGTH = 10
+private val ThumbnailWidth = 120.dp

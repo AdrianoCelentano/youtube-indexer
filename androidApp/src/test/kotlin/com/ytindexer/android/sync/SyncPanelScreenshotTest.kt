@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.ytindexer.shared.youtube.YouTubeVideo
+import com.ytindexer.ui.sync.SyncUiState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

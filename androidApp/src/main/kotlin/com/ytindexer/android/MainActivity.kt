@@ -18,11 +18,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ytindexer.android.auth.SignInScreen
 import com.ytindexer.android.auth.SignInViewModel
 import com.ytindexer.android.search.SearchScreen
-import com.ytindexer.android.search.SearchViewModel
 import com.ytindexer.android.search.openVideo
 import com.ytindexer.android.sync.SyncPanel
-import com.ytindexer.android.sync.SyncUiState
-import com.ytindexer.android.sync.SyncViewModel
+import com.ytindexer.ui.search.SearchViewModel
+import com.ytindexer.ui.sync.SyncUiState
+import com.ytindexer.ui.sync.SyncViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

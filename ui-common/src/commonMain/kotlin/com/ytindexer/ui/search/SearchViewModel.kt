@@ -1,4 +1,4 @@
-package com.ytindexer.android.search
+package com.ytindexer.ui.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +26,13 @@ data class SearchUiState(
     val indexEmpty: Boolean = false,
 )
 
+/**
+ * Drives the search screen on both app surfaces.
+ *
+ * Lives in `:ui-common` rather than either app module: the phone and TV screens render
+ * this same state with entirely different widgets (Material 3 vs tv-material), but the
+ * query debouncing, category toggling and result-fetching logic behind them is identical.
+ */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class SearchViewModel(
     private val engine: SearchEngine,
