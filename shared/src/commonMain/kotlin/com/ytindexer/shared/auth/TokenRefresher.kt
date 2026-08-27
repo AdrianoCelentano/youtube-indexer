@@ -20,14 +20,19 @@ fun interface TokenRefresher {
 /**
  * Refreshes against Google's OAuth 2.0 token endpoint.
  *
- * This is a **public client** (installed app): it sends `client_id` but no
+ * This is a **public client** (installed app) by default: it sends `client_id` but no
  * `client_secret`, which is why the authorization step must use PKCE. Shipping a client
  * secret in an APK would not be secret.
+ *
+ * @param clientSecret only set for the TV app. Google's device-code client type
+ *   ([GoogleDeviceCodeClient]) is a confidential client and expects its secret on every
+ *   token-endpoint call, refresh included -- PKCE is not an option for that grant type.
  */
 class GoogleTokenRefresher(
     private val httpClient: HttpClient,
     private val clientId: String,
     private val clock: Clock,
+    private val clientSecret: String? = null,
     private val tokenEndpoint: String = GOOGLE_TOKEN_ENDPOINT,
 ) : TokenRefresher {
     override suspend fun refresh(refreshToken: String): OAuthTokens {
@@ -40,6 +45,7 @@ class GoogleTokenRefresher(
                             append("client_id", clientId)
                             append("refresh_token", refreshToken)
                             append("grant_type", "refresh_token")
+                            clientSecret?.let { append("client_secret", it) }
                         },
                 )
             } catch (e: IOException) {
