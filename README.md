@@ -24,8 +24,13 @@ androidApp/    Phone & tablet application. Compose Multiplatform + Material 3.
 
 androidTvApp/  Android TV application. Compose + androidx.tv:tv-material (10-foot UI,
                D-pad focus). Registers a LEANBACK_LAUNCHER activity and declares
-               touchscreen as not required.
+               touchscreen as not required. Signs in via OAuth device-code flow rather
+               than the phone app's browser redirect -- see "Google OAuth setup" below.
 ```
+
+`SearchViewModel` and `SyncViewModel` live in `ui-common`, not either app module: the
+phone and TV screens render their state with different widgets (Material 3 vs
+tv-material), but the state machines behind search and sync don't vary by platform.
 
 Dependency direction is strictly one-way: both app modules depend on `ui-common` and
 `shared`; `ui-common` depends on `shared`; `shared` depends on neither.
@@ -40,13 +45,20 @@ Dependency direction is strictly one-way: both app modules depend on `ui-common`
 ```properties
 sdk.dir=/opt/android-sdk
 googleOauthClientIdAndroid=<your-id>.apps.googleusercontent.com
+googleOauthClientIdTv=<your-tv-id>.apps.googleusercontent.com
+googleOauthClientSecretTv=<your-tv-secret>
 ```
 
 ## Google OAuth setup
 
-**This repo is public — never commit the client ID or any secret.** The build reads it
-from `local.properties`; CI has none, so the app builds there but shows a
+**This repo is public — never commit the client ID or any secret.** The build reads them
+from `local.properties`; CI has none, so both apps build there but show a
 "not configured" screen instead of failing the build.
+
+Each app surface needs its **own** OAuth client, of a different type, because they sign
+in differently.
+
+### Phone app: browser redirect
 
 1. Enable the **YouTube Data API v3**:
    https://console.cloud.google.com/apis/library/youtube.googleapis.com
@@ -66,6 +78,25 @@ The redirect URI is derived automatically from the client ID
 (`com.googleusercontent.apps.<id>:/oauth2redirect`) and injected into the manifest, so a
 wrong SHA-1 or package name shows up as `redirect_uri_mismatch` at runtime rather than at
 build time.
+
+### TV app: device-code flow
+
+Android TV boxes generally have no browser capable of hosting AppAuth's Custom Tab, so
+the TV app instead uses [OAuth 2.0 for TV and Limited-Input Device
+Applications](https://developers.google.com/identity/protocols/oauth2/limited-input-device):
+it shows a short code and a URL, the user enters the code on a phone or laptop, and the TV
+polls until that finishes.
+
+1. Same consent screen and scope as above -- one Google Cloud project can back both
+   client IDs.
+2. Credentials → OAuth client ID → type **TV and Limited Input devices**.
+
+Unlike the phone app's client, this one is a *confidential* client: Google issues a
+secret alongside the ID, and the device-code and token endpoints expect it on every
+request (PKCE is not an option for this grant type). The secret is not meaningfully
+secret once shipped in an APK, but there is no alternative Google supports for this flow
+-- it goes through `local.properties` the same as the client ID, kept out of source
+control the same way.
 
 On this VPS:
 
@@ -180,7 +211,9 @@ Two AGP 9 behaviours shaped these build files, and are worth knowing before edit
 
 ## Current state
 
-This is the Phase 0 scaffolding. Both apps launch to a placeholder screen that renders a
-string produced by `shared`, which is what proves the module wiring end-to-end. Auth,
-the YouTube API client, indexing, and search are the Phase 1+ tickets; the libraries they
-need (Ktor, SQLDelight, Koin, WorkManager) are already declared in the version catalog.
+Both apps sign in, sync subscribed channels into the local index, and search it with
+thumbnails. The phone app searches by free text and category; the TV app browses by
+category on a card grid (no on-screen text search yet -- see `TvSearchScreen`'s doc
+comment for why). Playback opens the video in the YouTube app. Not yet built: an
+in-app player, semantic/embedding-based search (the schema anticipates it --
+see `Video.contentHash`/`embeddingModel`), and background sync via WorkManager.

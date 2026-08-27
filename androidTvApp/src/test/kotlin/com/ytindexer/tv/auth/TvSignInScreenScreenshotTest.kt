@@ -1,4 +1,4 @@
-package com.ytindexer.tv
+package com.ytindexer.tv.auth
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -13,37 +13,53 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Renders the TV screen at 1080p on the JVM and writes a PNG.
- *
- * This is the only automated way to see the 10-foot UI in this project: no emulator can
- * run on the build host, and Waydroid only provides phone/tablet Android images with no
- * leanback surface -- see README.
+ * Renders the TV sign-in screen at 1080p on the JVM and writes a PNG.
  *
  * Record/update goldens: ./gradlew :androidTvApp:recordRoborazziDebug
  * Verify against goldens: ./gradlew :androidTvApp:verifyRoborazziDebug
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-// 1080p TV: 1920x1080 px at xhdpi (2x) == 960x540 dp. Android requires qualifiers in a
-// strict order (size, then UI mode, then density) or parsing fails.
 @Config(sdk = [ROBOLECTRIC_SDK], qualifiers = "w960dp-h540dp-television-xhdpi")
-class TvScaffoldingScreenScreenshotTest {
+class TvSignInScreenScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    @Test
-    fun tvScaffoldingScreen() {
+    private fun capture(
+        name: String,
+        state: TvSignInUiState,
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 Surface {
-                    TvScaffoldingScreen()
+                    TvSignInScreen(state = state, onSignInClick = {}, onSignOutClick = {})
                 }
             }
         }
-
-        // Explicit path so goldens live in source control and CI can diff against them.
-        composeRule.onRoot().captureRoboImage("src/test/screenshots/tv_scaffolding_screen.png")
+        composeRule.onRoot().captureRoboImage("src/test/screenshots/tv_sign_in_$name.png")
     }
+
+    @Test
+    fun notConfigured() = capture("not_configured", TvSignInUiState.NotConfigured)
+
+    @Test
+    fun signedOut() = capture("signed_out", TvSignInUiState.SignedOut())
+
+    @Test
+    fun signedOutError() = capture("signed_out_error", TvSignInUiState.SignedOut("Sign-in was declined."))
+
+    @Test
+    fun requestingCode() = capture("requesting_code", TvSignInUiState.RequestingCode)
+
+    @Test
+    fun awaitingApproval() =
+        capture(
+            "awaiting_approval",
+            TvSignInUiState.AwaitingApproval(userCode = "ABCD-WXYZ", verificationUrl = "google.com/device"),
+        )
+
+    @Test
+    fun signedIn() = capture("signed_in", TvSignInUiState.SignedIn)
 }
 
 /**
