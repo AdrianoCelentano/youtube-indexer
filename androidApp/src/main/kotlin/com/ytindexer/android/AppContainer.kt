@@ -6,12 +6,12 @@ import androidx.lifecycle.ViewModelProvider
 import com.ytindexer.android.auth.GoogleAuthConfig
 import com.ytindexer.android.auth.GoogleSignInClient
 import com.ytindexer.android.auth.SignInViewModel
-import com.ytindexer.android.search.SearchViewModel
-import com.ytindexer.android.sync.SyncViewModel
 import com.ytindexer.shared.auth.AuthManager
 import com.ytindexer.shared.auth.createAuthManager
 import com.ytindexer.shared.index.IndexingComponent
 import com.ytindexer.shared.index.createIndexingComponent
+import com.ytindexer.ui.search.SearchViewModel
+import com.ytindexer.ui.sync.SyncViewModel
 
 /**
  * Manual dependency wiring.

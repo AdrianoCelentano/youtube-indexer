@@ -90,6 +90,9 @@ dependencies {
     implementation(libs.appauth)
     implementation(libs.androidx.browser)
     implementation(libs.kotlinx.coroutines.android)
+    // Network engine for :ui-common's VideoThumbnail. OkHttp rather than Coil's own Ktor
+    // engine since :shared already depends on it.
+    implementation(libs.coil.network.okhttp)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
